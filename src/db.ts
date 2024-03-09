@@ -137,26 +137,20 @@ export function patchById(
   id: number,
   value: object,
 ) {
-  const collectionId = connection
-    .prepare(
-      `
-  SELECT id
-  FROM collections
-  WHERE name = ? and group_name = ?
-`,
-    )
-    .pluck()
-    .get(collection, group) as number;
   const result = connection
     .prepare(
       `
   UPDATE records
   SET data = jsonb_patch(data, ?)
   WHERE id = ?
-  AND collection_id = ?
+  AND collection_id = (
+    SELECT id
+    FROM collections
+    WHERE name = ? 
+    AND group_name = ?)
   `,
     )
-    .run(JSON.stringify(value), id, collectionId);
+    .run(JSON.stringify(value), id, group, collection);
 
   return result.changes === 1;
 }
