@@ -1,5 +1,8 @@
-import { connect } from 'http2'
 import connection from './connection.ts'
+
+export function getGroups() {
+  return connection.prepare('SELECT * FROM groups').all()
+}
 
 export function createGroup(name: string) {
   const res = connection
@@ -17,37 +20,73 @@ export function createCollection(groupId: number, name: string) {
 export function addItemToCollection(
   groupId: number,
   collectionId: number,
-  value: Record<string, any>,
+  value: Record<string, any>
 ) {
-  const count = connection
-    .prepare(
-      'SELECT COUNT(*) as last_id FROM records WHERE group_id = ? AND collection_id = ?',
-    )
-    .get(groupId, collectionId)
-  const id = 1 + ((count as any).last_id as number)
   const res = connection
     .prepare(
-      'INSERT INTO records (id, group_id, collection_id, data) VALUES (?, ?, ?, jsonb(?))',
+      `
+      INSERT INTO records (id, group_id, collection_id, data) 
+      -- to fake an auto-incrementing ID we 
+      -- select the number of records with 
+      VALUES (1 + (SELECT COUNT(*)
+                   FROM records 
+                   WHERE group_id = ?
+                   AND collection_id = ?)
+              , ?
+              , ?
+              , jsonb(?)
+              )
+      RETURNING id
+      `
     )
-    .run(id, groupId, collectionId, JSON.stringify(value))
+    .get(groupId, collectionId, groupId, collectionId, JSON.stringify(value))
 
-  return id
+  return (res as any).id as number
 }
 
 export function getItems(group: string, collection: string) {
   return connection
     .prepare(
       `
-    SELECT *, json(data) as json 
+    SELECT records.*, json(data) as json 
     FROM records
     JOIN groups on groups.id = records.group_id
     JOIN collections on collections.id = records.collection_id
     WHERE groups.name = ? AND collections.name = ?
-  `,
+  `
     )
     .all(group, collection)
-    .map((_: any) => {
-      const obj = JSON.parse(_.json)
-      return _
+    .map((row: any) => {
+      const { id, json } = row
+      const obj = JSON.parse(json)
+      return { id, ...obj }
     })
+}
+
+export function getById(group: string, collection: string, id: number) {
+  const row = connection
+    .prepare(
+      `
+  SELECT records.*, json(data) as json 
+  FROM records
+  JOIN groups on groups.id = records.group_id
+  JOIN collections on collections.id = records.collection_id
+  WHERE records.id = ?
+  AND groups.name = ?
+  AND collections.name = ?
+`
+    )
+    .get(id, group, collection)
+
+  if (!row) {
+    return undefined
+  }
+
+  const json = (row as any).json as string
+  const _id = (row as any).id as number
+
+  return {
+    id: _id,
+    ...JSON.parse(json),
+  }
 }
