@@ -5,83 +5,79 @@ beforeEach(() => {
   db.reset();
 });
 
-describe("creating groups", () => {
-  it("groups starts empty", () => {
-    let groups = db.getGroups();
-    expect(groups).toHaveLength(0);
+describe("creating orgs", () => {
+  it("orgs starts empty", () => {
+    let orgs = db.getOrganisations();
+    expect(orgs).toHaveLength(0);
   });
 
-  it("adds a group", () => {
-    db.createGroup("pandas");
-    db.createGroup("dogs");
+  it("adds a org", () => {
+    db.createOrganisation("pandas");
+    db.createOrganisation("dogs");
 
-    let groups = db.getGroups();
-    expect(groups).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 1,
-          "name": "pandas",
-        },
-        {
-          "id": 2,
-          "name": "dogs",
-        },
-      ]
-    `);
+    let orgs = db.getOrganisations();
+    expect(orgs).toStrictEqual([
+      {
+        id: 1,
+        name: "pandas",
+      },
+      {
+        id: 2,
+        name: "dogs",
+      },
+    ]);
   });
 
   it("throws if you create duplicates", () => {
-    db.createGroup("pandas");
+    db.createOrganisation("pandas");
     expect(() => {
-      db.createGroup("pandas");
+      db.createOrganisation("pandas");
     }).toThrow();
   });
 });
 
-describe("creating collections within a group", () => {
+describe("creating collections within a org", () => {
   it("creates collections", () => {
-    db.createGroup("pandas");
+    db.createOrganisation("pandas");
     db.createCollection("pandas", "hats");
     db.createCollection("pandas", "pants");
-    expect(db.getCollections("pandas")).toMatchInlineSnapshot(`
-      [
-        {
-          "group_name": "pandas",
-          "id": 1,
-          "name": "hats",
-        },
-        {
-          "group_name": "pandas",
-          "id": 2,
-          "name": "pants",
-        },
-      ]
-    `);
+    expect(db.getCollections("pandas")).toStrictEqual([
+      {
+        organisation_name: "pandas",
+        id: 1,
+        name: "hats",
+      },
+      {
+        organisation_name: "pandas",
+        id: 2,
+        name: "pants",
+      },
+    ]);
   });
 
   it("fails to create duplicate collections", () => {
     expect(() => {
-      db.createGroup("pandas");
+      db.createOrganisation("pandas");
       db.createCollection("pandas", "hats");
       db.createCollection("pandas", "hats");
     }).toThrow();
   });
 
-  it("deletes an existing group", () => {
-    db.createGroup("pandas");
+  it("deletes an existing org", () => {
+    db.createOrganisation("pandas");
     db.createCollection("pandas", "hats");
-    db.deleteGroup("pandas");
-    expect(db.getGroups()).toMatchInlineSnapshot(`[]`);
+    db.deleteOrganisation("pandas");
+    expect(db.getOrganisations()).toMatchInlineSnapshot(`[]`);
   });
 
-  it("fails to delete a missing group", () => {
-    expect(db.deleteGroup("butts")).toBe(false);
+  it("fails to delete a missing org", () => {
+    expect(db.deleteOrganisation("butts")).toBe(false);
   });
 });
 
 describe("getting records", () => {
   beforeEach(() => {
-    db.createGroup("pandas");
+    db.createOrganisation("pandas");
     db.createCollection("pandas", "hats");
     db.addItemToCollection("pandas", "hats", { type: "panama" });
   });
@@ -102,7 +98,7 @@ describe("getting records", () => {
 
 describe("replacing records in the store", () => {
   beforeEach(() => {
-    db.createGroup("pandas");
+    db.createOrganisation("pandas");
     db.createCollection("pandas", "hats");
     db.addItemToCollection("pandas", "hats", { type: "panama" });
   });
@@ -142,7 +138,7 @@ describe("replacing records in the store", () => {
 
 describe("patching records in the store", () => {
   beforeEach(() => {
-    db.createGroup("pandas");
+    db.createOrganisation("pandas");
     db.createCollection("pandas", "hats");
     db.addItemToCollection("pandas", "hats", { type: "panama" });
   });
@@ -179,7 +175,7 @@ describe("patching records in the store", () => {
 
 describe("deleting an item from a collection", () => {
   beforeEach(() => {
-    db.createGroup("pandas");
+    db.createOrganisation("pandas");
     db.createCollection("pandas", "hats");
     db.addItemToCollection("pandas", "hats", { type: "panama" });
   });

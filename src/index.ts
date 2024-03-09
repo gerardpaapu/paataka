@@ -1,12 +1,6 @@
-import * as db from "./db.ts";
+import server from "./server.ts";
 
-if (db.getGroups().length === 0) {
-  db.createGroup("pandas");
-  db.createCollection("pandas", "hats");
-}
-
-db.addItemToCollection("pandas", "hats", { poop: "fart", butt: "smell" });
-db.deleteById("pandas", "hats", 1);
-db.patchById("pandas", "hats", 2, { stink: "butts" });
-
-console.log(db.getItems("pandas", "hats"));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`listening on http://localhost:${PORT}`);
+});
