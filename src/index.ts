@@ -9,7 +9,8 @@ if (db.getGroups().length === 0) {
 
 const id = db.addItemToCollection(1, 1, { poop: 'fart', butt: 'smell' })
 console.log({ id })
-console.log(db.getItems('pandas', 'hats'))
+// db.deleteById('pandas', 'hats', 1)
+db.patchById('pandas', 'hats', 2, { stink: 'butts' })
+// console.log(item)
 
-const item = db.getById('pandas', 'hats', 1)
-console.log(item)
+console.log(db.getItems('pandas', 'hats'))
