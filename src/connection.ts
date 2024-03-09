@@ -1,10 +1,10 @@
 import Database from "better-sqlite3";
 import * as Path from "node:path/posix";
 
-function init() {
+export function init() {
   const options = {};
   const path =
-    process.env.NODE_ENV === "test "
+    process.env.NODE_ENV === "test"
       ? ":memory:"
       : Path.resolve("storage/db.sqlite3");
   const db = new Database(path, options);

@@ -1,5 +1,9 @@
 import connection from "./connection.ts";
 
+export function reset() {
+  return connection.exec("DELETE FROM groups");
+}
+
 export function getGroups() {
   return connection.prepare("SELECT * FROM groups").all();
 }
@@ -62,7 +66,6 @@ export function addItemToCollection(
 }
 
 export function getItems(group: string, collection: string) {
-  //
   return connection
     .prepare(
       `
@@ -150,7 +153,7 @@ export function patchById(
     AND group_name = ?)
   `,
     )
-    .run(JSON.stringify(value), id, group, collection);
+    .run(JSON.stringify(value), id, collection, group);
 
   return result.changes === 1;
 }
@@ -170,5 +173,5 @@ export function deleteById(group: string, collection: string, id: number) {
     )
     .run(id, collection, group);
 
-  return result.changes;
+  return result.changes === 1;
 }
