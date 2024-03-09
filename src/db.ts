@@ -37,45 +37,26 @@ export function addItemToCollection(
   collection: string,
   value: Record<string, any>,
 ) {
-  // TODO: can we do this in one query?
-  const collectionId = connection
-    .prepare(
-      `
-      SELECT id
-      FROM collections
-      WHERE name = ? and group_name = ?
-    `,
-    )
-    .pluck()
-    .get(collection, group) as number;
-
-  console.log(
-    connection
-      .prepare(
-        `SELECT MAX(r.id)
-  FROM records as r
-  WHERE collection_id = ?`,
-      )
-      .pluck()
-      .all(collectionId),
-  );
-
   const res = connection
     .prepare(
       `
       INSERT INTO records (id, collection_id, data) 
       VALUES (1 + IFNULL(
                     (SELECT MAX(r.id)
-                     FROM records as r
-                     WHERE collection_id = ?) 
+                     FROM records AS r
+                     JOIN collections ON r.collection_id = collections.id 
+                     WHERE collections.name = ?
+                     AND   collections.group_name = ?) 
                   , 0)
-              , ?
+              , (SELECT id
+                  FROM collections
+                  WHERE name = ? and group_name = ?)
               , jsonb(?)
               )
       RETURNING id
       `,
     )
-    .get(collectionId, collectionId, JSON.stringify(value));
+    .get(collection, group, collection, group, JSON.stringify(value));
 
   return (res as any).id as number;
 }
@@ -132,29 +113,20 @@ export function replaceById(
   id: number,
   value: object,
 ) {
-  // should this technically be in a transaction?
-  const collectionId = connection
-    .prepare(
-      `
-    SELECT id
-    FROM collections
-    WHERE name = ? and group_name = ?
-  `,
-    )
-    .pluck()
-    .get(collection, group) as number;
-
-  console.log(collectionId);
   const result = connection
     .prepare(
       `
     UPDATE records
     SET data = jsonb(?)
     WHERE id = ?
-    AND collection_id = ?
+    AND collection_id = (
+        SELECT id
+        FROM collections
+        WHERE name = ? 
+        AND group_name = ?)
     `,
     )
-    .run(JSON.stringify(value), id, collectionId);
+    .run(JSON.stringify(value), id, collection, group);
 
   return result.changes === 1;
 }
@@ -190,27 +162,19 @@ export function patchById(
 }
 
 export function deleteById(group: string, collection: string, id: number) {
-  const collectionId = connection
-    .prepare(
-      `
-  SELECT id
-  FROM collections
-  WHERE name = ? and group_name = ?
-`,
-    )
-    .pluck()
-    .get(collection, group) as number;
-
   const result = connection
     .prepare(
       `
     DELETE
     FROM records
     WHERE id = ?
-    AND collection_id = ?
+    AND collection_id = (SELECT id
+      FROM collections
+      WHERE name = ?
+      AND group_name = ?)
     `,
     )
-    .run(id, collectionId);
+    .run(id, collection, group);
 
   return result.changes;
 }
