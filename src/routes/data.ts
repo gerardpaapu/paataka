@@ -57,6 +57,31 @@ router.get("/:organisation/:collection", (req, res, next) => {
   res.json(data);
 });
 
+router.get("/:organisation/:collection/:id", (req, res, next) => {
+  const { organisation, collection, id } = req.params;
+
+  if (!req.user || req.user !== organisation) {
+    res
+      .status(StatusCodes.UNAUTHORIZED)
+      .send({ error: "Invalid or missing bearer token" });
+    return;
+  }
+
+  const _id = parseInt(id, 10);
+  if (isNaN(_id)) {
+    res.sendStatus(StatusCodes.NOT_FOUND);
+    return;
+  }
+
+  const data = db.getById(organisation, collection, _id);
+  if (!data) {
+    res.sendStatus(StatusCodes.NOT_FOUND);
+    return;
+  }
+
+  res.json(data);
+});
+
 router.put("/:organisation/:collection/:id", (req, res, next) => {
   const { organisation, collection, id } = req.params;
 

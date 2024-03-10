@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "dev": "tsx src/index.ts",
-    "build": "node ./esbuild.mjs"
+    "dev": "tsx watch src/index.ts",
+    "build": "node ./esbuild.mjs",
+    "dev:invite": "tsx src/scripts/create-invite.ts"
   },
   "keywords": [],
   "author": "",

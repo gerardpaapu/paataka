@@ -147,7 +147,7 @@ export function getById(org: string, collection: string, id: number) {
   const row = connection
     .prepare(
       `
-      SELECT *, json(data) as json 
+      SELECT records.*, json(data) as json 
       FROM records
       JOIN collections ON collection_id = collections.id
       WHERE records.id = ?
@@ -259,7 +259,7 @@ export function getCollectionSummary(organisation: string) {
     SELECT name, COUNT(records.id) as count
     FROM collections
     LEFT OUTER JOIN records ON records.collection_id = collections.id
-    WHERE organisation_name = ?
+    WHERE collections.organisation_name = ?
     GROUP BY collections.id
   `,
     )

@@ -20,10 +20,29 @@ router.get("/:organisation", (req, res, next) => {
   }
   const summary = db.getCollectionSummary(organisation);
 
-  return {
-    key: org.key,
+  res.json({
+    name: org.name,
+    key: org.key.toString("base64url"),
     collections: summary,
-  };
+  });
+});
+
+router.post("/:organisation/key", (req, res, next) => {
+  const { organisation } = req.params;
+  const { code } = req.query;
+  const org = db.getOrganisationByName(organisation);
+  if (!org) {
+    res.sendStatus(StatusCodes.NOT_FOUND);
+    return;
+  }
+
+  if (code !== org.code.toString("base64url")) {
+    res.sendStatus(StatusCodes.UNAUTHORIZED);
+    return;
+  }
+
+  db.refreshKey(organisation, org.code);
+  res.sendStatus(StatusCodes.CREATED);
 });
 
 router.post("/:organisation/seed", (req, res, next) => {
@@ -45,7 +64,10 @@ router.post("/:organisation/seed", (req, res, next) => {
       continue;
     }
 
-    const collection = db.createCollection(organisation, key);
+    try {
+      // it's fine if the collection already exists
+      db.createCollection(organisation, key);
+    } catch (e) {}
     for (const item of value) {
       db.addItemToCollection(organisation, key, item);
     }

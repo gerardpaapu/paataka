@@ -46,6 +46,7 @@ function createOrganisation(name) {
 }
 
 // src/scripts/create-invite.ts
+console.log(process.argv);
 var [_0, _1, groupName] = process.argv;
 if (!groupName) {
   throw new Error();
@@ -53,5 +54,5 @@ if (!groupName) {
 var id = createOrganisation(groupName);
 var { code } = getOrganisation(id);
 var codeString = code.toString("base64url");
-process.stdout.write(`${groupName}	${codeString}
+process.stdout.write(`https://paataka.cloud/${groupName}?code=${codeString}
 `);
