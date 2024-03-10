@@ -4,6 +4,7 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "start": "node dist/index.js",
     "test": "vitest",
     "dev": "tsx watch src/index.ts",
     "build": "node ./esbuild.mjs",
