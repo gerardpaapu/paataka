@@ -42,6 +42,7 @@ router.post("/:organisation", (req, res, next) => {
     res.sendStatus(StatusCodes.NOT_FOUND);
     return;
   }
+
   res.json({ key: key.toString("base64url") });
 });
 

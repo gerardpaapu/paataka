@@ -5,10 +5,16 @@ export function reset() {
   return connection.exec("DELETE FROM organisations");
 }
 
-export function getOrganisation(id: number) {
+export function getOrganisation(id: number | bigint) {
   return connection
     .prepare("SELECT * FROM organisations WHERE id = ?")
     .get(id) as OrganisationWithSecrets;
+}
+
+export function getOrganisationByName(name: string) {
+  return connection
+    .prepare("SELECT * FROM organisations WHERE name = ?")
+    .get(name) as OrganisationWithSecrets;
 }
 
 export function refreshKey(organisation: string, code: Buffer) {
@@ -23,6 +29,19 @@ export function refreshKey(organisation: string, code: Buffer) {
     )
     .pluck()
     .get(organisation, code) as Buffer | undefined;
+}
+
+export function validateKey(key: Buffer) {
+  return connection
+    .prepare(
+      `
+      SELECT name 
+      FROM organisations
+      WHERE key = ?
+      `,
+    )
+    .pluck()
+    .get(key) as string;
 }
 
 export function getOrganisations() {
@@ -82,8 +101,7 @@ export function addItemToCollection(
                   WHERE name = ? and organisation_name = ?)
               , jsonb(?)
               )
-      RETURNING id
-      `,
+      RETURNING id, collection_id      `,
     )
     .get(
       collection,
@@ -93,25 +111,36 @@ export function addItemToCollection(
       JSON.stringify(value),
     );
 
+  if ((res as any).collection_id == null) {
+    return undefined;
+  }
   return (res as any).id as number;
 }
 
 export function getItems(org: string, collection: string) {
-  return connection
+  const items = connection
     .prepare(
       `
-    SELECT records.*, json(data) as json 
-    FROM records
-    JOIN collections ON collection_id = collections.id
+    SELECT records.*, json(data) as json
+    FROM collections
+    LEFT OUTER JOIN records ON records.collection_id = collections.id
     WHERE collections.organisation_name = ? AND collections.name = ?
   `,
     )
-    .all(org, collection)
-    .map((row: any) => {
-      const { id, json } = row;
-      const obj = JSON.parse(json);
-      return { id, ...obj };
-    });
+    .all(org, collection) as any[];
+
+  if (items.length === 0) {
+    return undefined;
+  }
+
+  if (items.length === 1 && items[0].data == undefined) {
+    return [];
+  }
+
+  return items.map((row) => {
+    const { json, id } = row;
+    return { id, ...JSON.parse(json) };
+  });
 }
 
 export function getById(org: string, collection: string, id: number) {
@@ -221,4 +250,20 @@ export function getApiKey(organisation: string, code: Buffer) {
     .get(organisation, code);
 
   return result as Buffer;
+}
+
+export function getCollectionSummary(organisation: string) {
+  const rows = connection
+    .prepare(
+      `
+    SELECT name, COUNT(records.id) as count
+    FROM collections
+    LEFT OUTER JOIN records ON records.collection_id = collections.id
+    WHERE organisation_name = ?
+    GROUP BY collections.id
+  `,
+    )
+    .all(organisation);
+
+  return rows;
 }
