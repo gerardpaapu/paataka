@@ -34,7 +34,7 @@ export function compile(ast: AstNode): Sql {
         const [a, b] = ast.value;
         const lhs = compile(a)($);
 
-        return { sql: `(${lhs.sql}) -> '$.${b}'`, params: [...lhs.params] };
+        return { sql: `(${lhs.sql}) ->> '$.${b}'`, params: [...lhs.params] };
       };
 
     case "Prefix":
@@ -82,7 +82,7 @@ export function compile(ast: AstNode): Sql {
 
           case "OP_GTE":
             return {
-              sql: `(${lhs.sql} >= ${rhs.sql})`,
+              sql: `((${lhs.sql}) >= (${rhs.sql}))`,
               params,
             };
 
