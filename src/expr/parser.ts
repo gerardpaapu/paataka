@@ -116,7 +116,7 @@ function parseNegated(tokens: Token[]): AstNode {
   return parseAccessor(tokens);
 }
 
-function isBinopType(t: TokenType): t is BinOp {
+function isComparisonType(t: TokenType): t is BinOp {
   switch (t) {
     case "OP_GT":
     case "OP_GTE":
@@ -138,7 +138,7 @@ function parseComparison(tokens: Token[]): AstNode {
     }
 
     let token = tokens[0];
-    if (isBinopType(token.type)) {
+    if (isComparisonType(token.type)) {
       tokens.shift();
       let rhs = parseNegated(tokens);
       lhs = { type: "BinOp", operator: token.type, value: [lhs, rhs] };
@@ -148,8 +148,36 @@ function parseComparison(tokens: Token[]): AstNode {
   }
 }
 
+function isBooleanType(t: TokenType): t is BinOp {
+  switch (t) {
+    case "OP_AND":
+    case "OP_OR":
+      return true;
+    default:
+      return false;
+  }
+}
+
+function parseBoolean(tokens: Token[]): AstNode {
+  let lhs = parseComparison(tokens);
+  for (;;) {
+    if (tokens.length === 0) {
+      return lhs;
+    }
+
+    let token = tokens[0];
+    if (isBooleanType(token.type)) {
+      tokens.shift();
+      let rhs = parseComparison(tokens);
+      lhs = { type: "BinOp", operator: token.type, value: [lhs, rhs] };
+    } else {
+      return lhs;
+    }
+  }
+}
+
 function parseExpr(tokens: Token[]): AstNode {
-  return parseComparison(tokens);
+  return parseBoolean(tokens);
 }
 
 export function parse(str: string): AstNode {

@@ -6,7 +6,9 @@ export type BinOp =
   | "OP_EQ"
   | "OP_LT"
   | "OP_LTE"
-  | "OP_NEQ";
+  | "OP_NEQ"
+  | "OP_AND"
+  | "OP_OR";
 
 export type PrefixOp = "OP_NEGATE" | "OP_MINUS";
 

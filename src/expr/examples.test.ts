@@ -4,6 +4,9 @@ import * as db from "../db.ts";
 import { compile } from "./compiler.ts";
 import { parse } from "./parser.ts";
 
+// TODO: symbols should only be _ or id and they should compile appropriately
+// TODO: implement '&&' and '||'
+
 describe("filtering data", () => {
   beforeEach(() => {
     db.reset();
@@ -20,6 +23,7 @@ describe("filtering data", () => {
       foo: { bar: "box" },
       baz: { quux: 3 },
     });
+
     db.addItemToCollection("pandas", "hats", {
       key: "bar",
       foo: { bar: "biz" },
@@ -31,12 +35,7 @@ describe("filtering data", () => {
     const ast = parse("_.foo[_.key]");
     const { sql, params } = compile(ast)("data");
     const result = connection
-      .prepare(
-        `
-    SELECT ${sql}
-    FROM records
-  `,
-      )
+      .prepare(`SELECT ${sql} FROM records`)
       .pluck()
       .all(...params);
 
@@ -62,13 +61,7 @@ describe("filtering data", () => {
     `);
 
     const result = connection
-      .prepare(
-        `
-      SELECT json(data)
-      FROM records
-      WHERE ${sql}
-    `,
-      )
+      .prepare(`SELECT json(data) FROM records WHERE ${sql}`)
       .pluck()
       .all(...params);
 

@@ -57,6 +57,17 @@ export function compile(ast: AstNode): Sql {
         const rhs = compile(b)($);
         const params = [...lhs.params, ...rhs.params];
         switch (ast.operator) {
+          case "OP_AND":
+            return {
+              sql: `(${lhs.sql} AND ${rhs.sql})`,
+              params,
+            };
+
+          case "OP_OR":
+            return {
+              sql: `(${lhs.sql} OR ${rhs.sql})`,
+              params,
+            };
           case "OP_EQ":
             return {
               sql: `(${lhs.sql} = ${rhs.sql})`,
