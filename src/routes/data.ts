@@ -40,6 +40,11 @@ router.post("/:organisation/:collection", (req, res, next) => {
 
 router.get("/:organisation/:collection", (req, res, next) => {
   const { organisation, collection } = req.params;
+  const { where } = req.query;
+  const opts: Record<string, string | undefined> = {};
+  if (typeof where === "string") {
+    opts.where = where;
+  }
 
   if (!req.user || req.user !== organisation) {
     res
@@ -48,7 +53,7 @@ router.get("/:organisation/:collection", (req, res, next) => {
     return;
   }
 
-  const data = db.getItems(organisation, collection);
+  const data = db.getItems(organisation, collection, opts);
   if (data == undefined) {
     res.sendStatus(StatusCodes.NOT_FOUND);
     return;

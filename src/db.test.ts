@@ -195,3 +195,31 @@ describe("deleting an item from a collection", () => {
     expect(db.deleteById("pandas", "hats", 2)).toBe(false);
   });
 });
+
+describe("filtering records  in the store with expressions", () => {
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "panama", size: 3 });
+    db.addItemToCollection("pandas", "hats", { type: "bowler", size: 1 });
+    db.addItemToCollection("pandas", "hats", { type: "trucker", size: 4 });
+  });
+
+  it("selects for size >= 3", () => {
+    const hats = db.getItems("pandas", "hats", { where: "_.size >= 3" });
+    expect(hats).toMatchInlineSnapshot(`
+      [
+        {
+          "id": 1,
+          "size": 3,
+          "type": "panama",
+        },
+        {
+          "id": 3,
+          "size": 4,
+          "type": "trucker",
+        },
+      ]
+    `);
+  });
+});

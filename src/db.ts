@@ -1,4 +1,5 @@
 import connection from "./connection.ts";
+import { compileExpr } from "./expr/index.ts";
 import { Collection, Organisation, OrganisationWithSecrets } from "./models.ts";
 
 export function reset() {
@@ -117,17 +118,32 @@ export function addItemToCollection(
   return (res as any).id as number;
 }
 
-export function getItems(org: string, collection: string) {
+export function getItems(
+  org: string,
+  collection: string,
+  features?: Record<string, string | undefined>,
+) {
+  let WHERE = { sql: "", params: [] as unknown[] };
+  if (features && features.where && typeof features.where === "string") {
+    const { sql, params } = compileExpr(features.where);
+    WHERE = {
+      sql: `AND (${sql})`,
+      params,
+    };
+  }
+
   const items = connection
     .prepare(
       `
     SELECT records.*, json(data) as json
     FROM collections
     LEFT OUTER JOIN records ON records.collection_id = collections.id
-    WHERE collections.organisation_name = ? AND collections.name = ?
+    WHERE collections.organisation_name = ?
+    AND collections.name = ?
+    ${WHERE.sql}
   `,
     )
-    .all(org, collection) as any[];
+    .all(org, collection, ...WHERE.params) as any[];
 
   if (items.length === 0) {
     return undefined;

@@ -210,6 +210,45 @@ describe("listing objects in a collection", () => {
   });
 });
 
+describe("filtering objects in a collection with expressions", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler", size: 2 });
+    db.addItemToCollection("pandas", "hats", { type: "top hat", size: 1 });
+    db.addItemToCollection("pandas", "hats", { type: "cowboy", size: 3 });
+
+    db.addItemToCollection("pandas", "hats", { type: "sombrero", size: 7 });
+  });
+
+  it("filters to hats size 3 and up", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "_.size >= 3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchInlineSnapshot(`
+      [
+        {
+          "id": 3,
+          "size": 3,
+          "type": "cowboy",
+        },
+        {
+          "id": 4,
+          "size": 7,
+          "type": "sombrero",
+        },
+      ]
+    `);
+  });
+});
+
 describe("replacing objects in a collection", () => {
   let token: string;
   beforeEach(() => {

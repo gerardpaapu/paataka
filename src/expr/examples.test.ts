@@ -3,6 +3,7 @@ import connection from "../connection.ts";
 import * as db from "../db.ts";
 import { compile } from "./compiler.ts";
 import { parse } from "./parser.ts";
+import { compileExpr } from "./index.ts";
 
 // TODO: symbols should only be _ or id and they should compile appropriately
 // TODO: implement '&&' and '||'
@@ -32,8 +33,7 @@ describe("filtering data", () => {
   });
 
   it("can look up properties in other properties", () => {
-    const ast = parse("_.foo[_.key]");
-    const { sql, params } = compile(ast)("data");
+    const { sql, params } = compileExpr("_.foo[_.key]");
     const result = connection
       .prepare(`SELECT ${sql} FROM records`)
       .pluck()
@@ -49,8 +49,7 @@ describe("filtering data", () => {
   });
 
   it("can filter by nested properties", () => {
-    const ast = parse("_.baz.quux >= 3");
-    const { sql, params } = compile(ast)("data");
+    const { sql, params } = compileExpr("_.baz.quux >= 3");
     expect({ sql, params }).toMatchInlineSnapshot(`
       {
         "params": [

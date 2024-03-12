@@ -180,9 +180,7 @@ function parseExpr(tokens: Token[]): AstNode {
   return parseBoolean(tokens);
 }
 
-export function parse(str: string): AstNode {
-  const src = source(str);
-  const tokens = tokenize(src);
+export function parse(tokens: Token[]): AstNode {
   const expr = parseExpr(tokens);
   if (tokens.length !== 0) {
     throw new Error("Trailing tokens");
