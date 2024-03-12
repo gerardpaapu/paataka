@@ -57,10 +57,10 @@ function parseAtom(tokens: Token[]): AstNode {
       return Ast.id(token.value);
 
     case "STRING_LITERAL":
-      return Ast.str(token.value || "");
+      return Ast.str(token.value!);
 
     case "NUMBER_LITERAL":
-      return Ast.num(parseFloat(token.value || ""));
+      return Ast.num(JSON.parse(token.value!) as number);
 
     default:
       throw new Error(`Unexpected ${token.type}`);
@@ -152,7 +152,7 @@ function parseExpr(tokens: Token[]): AstNode {
   return parseComparison(tokens);
 }
 
-function parse(str: string): AstNode {
+export function parse(str: string): AstNode {
   const src = source(str);
   const tokens = tokenize(src);
   const expr = parseExpr(tokens);
