@@ -103,4 +103,9 @@ describe("filtering data", () => {
     const { sql, params } = compileExpr('_.author == "moon denier"');
     expect(sql).toMatchInlineSnapshot(`"((data) ->> '$.author' = ?)"`);
   });
+
+  it("can reference the id", () => {
+    const { sql } = compileExpr("id >= 23");
+    expect(sql).toMatchInlineSnapshot(`"((records.id) >= (?))"`);
+  });
 });

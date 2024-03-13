@@ -51,8 +51,8 @@ function parseAtom(tokens: Token[]): AstNode {
     }
 
     case "IDENTIFIER":
-      if (token.value !== "_") {
-        throw new Error("");
+      if (token.value !== "_" && token.value !== "id") {
+        throw new Error(`Invalid identifier: ${token.value}`);
       }
       return Ast.id(token.value);
 
