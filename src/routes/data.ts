@@ -40,8 +40,8 @@ router.post("/:organisation/:collection", (req, res, next) => {
 
 router.get("/:organisation/:collection", (req, res, next) => {
   const { organisation, collection } = req.params;
-  const { where, orderBy, dir } = req.query;
-  const opts: Record<string, string | undefined> = {};
+  const { where, orderBy, dir, itemsPerPage, page } = req.query;
+  const opts: db.Features = {};
   if (typeof where === "string") {
     opts.where = where;
   }
@@ -50,8 +50,19 @@ router.get("/:organisation/:collection", (req, res, next) => {
     opts.orderBy = orderBy;
   }
 
-  if (typeof dir === "string") {
+  if (dir === "asc" || dir === "desc") {
     opts.dir = dir;
+  }
+
+  let itemsPerPage_ =
+    typeof itemsPerPage === "string" ? parseInt(itemsPerPage, 10) : NaN;
+  if (!isNaN(itemsPerPage_)) {
+    opts.itemsPerPage = itemsPerPage_;
+  }
+
+  let page_ = Number(page);
+  if (!isNaN(page_)) {
+    opts.page = page_;
   }
 
   if (!req.user || req.user !== organisation) {

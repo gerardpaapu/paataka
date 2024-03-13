@@ -118,11 +118,15 @@ export function addItemToCollection(
   return (res as any).id as number;
 }
 
-export function getItems(
-  org: string,
-  collection: string,
-  features?: Record<string, string | undefined>,
-) {
+export interface Features {
+  where?: string;
+  orderBy?: string;
+  dir?: "asc" | "desc";
+  itemsPerPage?: number;
+  page?: number;
+}
+
+export function getItems(org: string, collection: string, features?: Features) {
   let WHERE = { sql: "", params: [] as unknown[] };
   if (features && features.where && typeof features.where === "string") {
     const { sql, params } = compileExpr(features.where);
@@ -142,6 +146,17 @@ export function getItems(
     };
   }
 
+  let PAGING = { sql: "", params: [] as unknown[] };
+  if (features?.page !== undefined) {
+    let page = Math.floor(Math.max(0, features.page));
+    let itemsPerPage = Math.floor(Math.max(0, features.itemsPerPage ?? 20));
+
+    PAGING = {
+      sql: `LIMIT ? OFFSET ?\n`,
+      params: [itemsPerPage, (page - 1) * itemsPerPage],
+    };
+  }
+
   const rows = connection
     .prepare(
       `
@@ -156,9 +171,16 @@ export function getItems(
           ${ORDER_BY.sql}
     )
     SELECT *, (SELECT count(*) FROM results) as count FROM results
+    ${PAGING.sql}
   `,
     )
-    .all(org, collection, ...WHERE.params, ...ORDER_BY.params) as any[];
+    .all(
+      org,
+      collection,
+      ...WHERE.params,
+      ...ORDER_BY.params,
+      ...PAGING.params,
+    ) as any[];
 
   if (rows.length === 0) {
     return undefined;

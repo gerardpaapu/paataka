@@ -339,6 +339,80 @@ describe("sorting objects in a collection with expressions", () => {
   });
 });
 
+describe('getting a specific "page" of results', () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    for (let i = 0; i < 100; i++) {
+      db.addItemToCollection("pandas", "hats", {
+        type: `hat-type-${i}`,
+        size: 2,
+      });
+    }
+  });
+
+  it("default page size is 20", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ page: 1 })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    const result = res.body;
+    expect(result.count).toBe(100);
+    expect(result.items).toHaveLength(20);
+    expect(result.items[19]).toMatchInlineSnapshot(`
+      {
+        "id": 20,
+        "size": 2,
+        "type": "hat-type-19",
+      }
+    `);
+  });
+
+  it("uses non-default page size", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ page: 1, itemsPerPage: 5 })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    const result = res.body;
+    expect(result.count).toBe(100);
+    expect(result.items).toHaveLength(5);
+    expect(result.items[4]).toMatchInlineSnapshot(`
+      {
+        "id": 5,
+        "size": 2,
+        "type": "hat-type-4",
+      }
+    `);
+  });
+
+  it("gets later pages", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ page: 3, itemsPerPage: 5 })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    const result = res.body;
+    expect(result.count).toBe(100);
+    expect(result.items).toHaveLength(5);
+    expect(result.items[4]).toMatchInlineSnapshot(`
+      {
+        "id": 15,
+        "size": 2,
+        "type": "hat-type-14",
+      }
+    `);
+  });
+});
+
 describe("replacing objects in a collection", () => {
   let token: string;
   beforeEach(() => {
