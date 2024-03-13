@@ -4,6 +4,8 @@ import * as db from "../db.ts";
 import { compile } from "./compiler.ts";
 import { parse } from "./parser.ts";
 import { compileExpr } from "./index.ts";
+import { tokenize } from "./tokenizer.ts";
+import { source } from "./source.ts";
 
 // TODO: symbols should only be _ or id and they should compile appropriately
 // TODO: implement '&&' and '||'
@@ -70,5 +72,35 @@ describe("filtering data", () => {
         "{"key":"bar","foo":{"bar":"box"},"baz":{"quux":3}}",
       ]
     `);
+  });
+
+  it("can use string literals", () => {
+    const src = source("_.author == 7");
+    const tokens = tokenize(src);
+    expect(tokens).toMatchInlineSnapshot(`
+      [
+        {
+          "type": "IDENTIFIER",
+          "value": "_",
+        },
+        {
+          "type": "DOT",
+        },
+        {
+          "type": "IDENTIFIER",
+          "value": "author",
+        },
+        {
+          "type": "OP_EQ",
+        },
+        {
+          "type": "NUMBER_LITERAL",
+          "value": "7",
+        },
+      ]
+    `);
+
+    const { sql, params } = compileExpr('_.author == "moon denier"');
+    expect(sql).toMatchInlineSnapshot(`"((data) ->> '$.author' = ?)"`);
   });
 });

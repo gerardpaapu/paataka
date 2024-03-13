@@ -249,6 +249,84 @@ describe("filtering objects in a collection with expressions", () => {
   });
 });
 
+describe("sorting objects in a collection with expressions", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler", size: 2 });
+    db.addItemToCollection("pandas", "hats", { type: "top hat", size: 1 });
+    db.addItemToCollection("pandas", "hats", { type: "cowboy", size: 3 });
+
+    db.addItemToCollection("pandas", "hats", { type: "sombrero", size: 7 });
+  });
+
+  it("orders hats by size (ascending)", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ orderBy: "_.size", dir: "asc" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual([
+      {
+        id: 2,
+        size: 1,
+        type: "top hat",
+      },
+      {
+        id: 1,
+        size: 2,
+        type: "bowler",
+      },
+      {
+        id: 3,
+        size: 3,
+        type: "cowboy",
+      },
+      {
+        id: 4,
+        size: 7,
+        type: "sombrero",
+      },
+    ]);
+  });
+
+  it("orders hats by size (descending)", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ orderBy: "_.size", dir: "desc" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual([
+      {
+        id: 4,
+        size: 7,
+        type: "sombrero",
+      },
+      {
+        id: 3,
+        size: 3,
+        type: "cowboy",
+      },
+      {
+        id: 1,
+        size: 2,
+        type: "bowler",
+      },
+      {
+        id: 2,
+        size: 1,
+        type: "top hat",
+      },
+    ]);
+  });
+});
+
 describe("replacing objects in a collection", () => {
   let token: string;
   beforeEach(() => {

@@ -127,7 +127,17 @@ export function getItems(
   if (features && features.where && typeof features.where === "string") {
     const { sql, params } = compileExpr(features.where);
     WHERE = {
-      sql: `AND (${sql})`,
+      sql: `AND (${sql})\n`,
+      params,
+    };
+  }
+
+  let ORDER_BY = { sql: "", params: [] as unknown[] };
+  if (typeof features?.orderBy === "string") {
+    const { sql, params } = compileExpr(features?.orderBy);
+    const dir = features?.dir?.toLocaleLowerCase() === "desc" ? "DESC" : "ASC";
+    ORDER_BY = {
+      sql: `ORDER BY (${sql}) ${dir}\n`,
       params,
     };
   }
@@ -141,9 +151,10 @@ export function getItems(
     WHERE collections.organisation_name = ?
     AND collections.name = ?
     ${WHERE.sql}
+    ${ORDER_BY.sql}
   `,
     )
-    .all(org, collection, ...WHERE.params) as any[];
+    .all(org, collection, ...WHERE.params, ...ORDER_BY.params) as any[];
 
   if (items.length === 0) {
     return undefined;

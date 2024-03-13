@@ -40,10 +40,18 @@ router.post("/:organisation/:collection", (req, res, next) => {
 
 router.get("/:organisation/:collection", (req, res, next) => {
   const { organisation, collection } = req.params;
-  const { where } = req.query;
+  const { where, orderBy, dir } = req.query;
   const opts: Record<string, string | undefined> = {};
   if (typeof where === "string") {
     opts.where = where;
+  }
+
+  if (typeof orderBy === "string") {
+    opts.orderBy = orderBy;
+  }
+
+  if (typeof dir === "string") {
+    opts.dir = dir;
   }
 
   if (!req.user || req.user !== organisation) {
