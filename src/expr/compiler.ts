@@ -12,7 +12,13 @@ function sql(sql: string, params: unknown[]): Sql {
 export function compile(ast: AstNode): Sql {
   switch (ast.type) {
     case "Id":
-      return ($) => ({ sql: $, params: [] });
+      return ($) => {
+        if (ast.value === "id") {
+          return { sql: "records.id", params: [] };
+        } else {
+          return { sql: $, params: [] };
+        }
+      };
 
     case "Literal":
       return sql("?", [ast.value]);
