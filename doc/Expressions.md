@@ -78,11 +78,14 @@ _.height < 1.5 && _.weightKg < 50; // could I carry this person?
 
 ## Using expressions in URLs
 
+Expressions are used in the query string (
 Our expression language is designed without concern
 for what it looks like in a URL, and therefore "how it looks" is "ugly".
 
+For example, behold!
+
 ```
-GET https://paataka.cloud/api/_/clown/shoes?where=_.size%20%3E%3D%205%20%26%26%20_.color%20%3D%3D%20%22blue%22
+https://paataka.cloud/api/_/clown/shoes?where=_.size%20%3E%3D%205%20%26%26%20_.color%20%3D%3D%20%22blue%22
 ```
 
 This is certainly not pretty, but most of the time when you're using the language you'll likely be using a library like superagent, so it will look like this:
@@ -94,11 +97,25 @@ const res = await request
     where: '_.size >= 5 && _.color == "blue"',
   })
   .auth(API_TOKEN, { type: "bearer" });
+
+const data = res.body
 ```
+
+or using web standard APIs:
+
+```js
+const url = new URL('https://paataka.cloud/api/_/clown/shoes')
+url.params.set('where', '_.size >= 5 && _.color == "blue"')
+const res = await fetch(url)
+const data = await res.json()
+```
+
+So, while there are cases where you end up looking at the URL and it's not-ideal, it is explicitly a non-goal of this
+project to care what the query string looks like.
 
 ## Filtering objects with "where"
 
-As seen in the above example, using the query string "where", we can filter our objects to a set for which that expression returned true (or truthy).
+As seen in the above example, using the query key "where", we can filter our objects to a set for which that expression returned true (or truthy).
 
 ## Sorting objects with `orderBy`
 
@@ -138,4 +155,3 @@ So for this object ...
 _.rangers[_.active] == "t-rex";
 ```
 
-I'm not sure why anyone would do that, but you can

@@ -181,16 +181,19 @@ describe("listing objects in a collection", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toStrictEqual([
-      {
-        id: 1,
-        type: "bowler",
-      },
-      {
-        id: 2,
-        type: "sombrero",
-      },
-    ]);
+    expect(res.body).toStrictEqual({
+      count: 2,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          type: "sombrero",
+        },
+      ],
+    });
   });
 
   it("fails with a 404 for a missing collection", async () => {
@@ -233,18 +236,21 @@ describe("filtering objects in a collection with expressions", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 3,
-          "size": 3,
-          "type": "cowboy",
-        },
-        {
-          "id": 4,
-          "size": 7,
-          "type": "sombrero",
-        },
-      ]
+      {
+        "count": 2,
+        "items": [
+          {
+            "id": 3,
+            "size": 3,
+            "type": "cowboy",
+          },
+          {
+            "id": 4,
+            "size": 7,
+            "type": "sombrero",
+          },
+        ],
+      }
     `);
   });
 });
@@ -271,28 +277,31 @@ describe("sorting objects in a collection with expressions", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toStrictEqual([
-      {
-        id: 2,
-        size: 1,
-        type: "top hat",
-      },
-      {
-        id: 1,
-        size: 2,
-        type: "bowler",
-      },
-      {
-        id: 3,
-        size: 3,
-        type: "cowboy",
-      },
-      {
-        id: 4,
-        size: 7,
-        type: "sombrero",
-      },
-    ]);
+    expect(res.body).toStrictEqual({
+      count: 4,
+      items: [
+        {
+          id: 2,
+          size: 1,
+          type: "top hat",
+        },
+        {
+          id: 1,
+          size: 2,
+          type: "bowler",
+        },
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+        {
+          id: 4,
+          size: 7,
+          type: "sombrero",
+        },
+      ],
+    });
   });
 
   it("orders hats by size (descending)", async () => {
@@ -302,28 +311,31 @@ describe("sorting objects in a collection with expressions", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toStrictEqual([
-      {
-        id: 4,
-        size: 7,
-        type: "sombrero",
-      },
-      {
-        id: 3,
-        size: 3,
-        type: "cowboy",
-      },
-      {
-        id: 1,
-        size: 2,
-        type: "bowler",
-      },
-      {
-        id: 2,
-        size: 1,
-        type: "top hat",
-      },
-    ]);
+    expect(res.body).toStrictEqual({
+      count: 4,
+      items: [
+        {
+          id: 4,
+          size: 7,
+          type: "sombrero",
+        },
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+        {
+          id: 1,
+          size: 2,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          size: 1,
+          type: "top hat",
+        },
+      ],
+    });
   });
 });
 
@@ -346,16 +358,19 @@ describe("replacing objects in a collection", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(StatusCodes.NO_CONTENT);
-    expect(db.getItems("pandas", "hats")).toStrictEqual([
-      {
-        id: 1,
-        type: "bowler",
-      },
-      {
-        id: 2,
-        type: "candelabra",
-      },
-    ]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 2,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          type: "candelabra",
+        },
+      ],
+    });
   });
 
   it("fails with a bad token", async () => {
@@ -395,16 +410,19 @@ describe("patching objects in a collection", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(StatusCodes.NO_CONTENT);
-    expect(db.getItems("pandas", "hats")).toStrictEqual([
-      {
-        id: 1,
-        type: "bowler",
-      },
-      {
-        id: 2,
-        type: "candelabra",
-      },
-    ]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 2,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          type: "candelabra",
+        },
+      ],
+    });
   });
   it("fails with a bad token", async () => {
     const res = await request(server)

@@ -105,33 +105,42 @@ describe("replacing records in the store", () => {
 
   it("replaces the record in the store", () => {
     expect(db.getItems("pandas", "hats")).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 1,
-          "type": "panama",
-        },
-      ]
+      {
+        "count": 1,
+        "items": [
+          {
+            "id": 1,
+            "type": "panama",
+          },
+        ],
+      }
     `);
     db.replaceById("pandas", "hats", 1, { type: "bowler" });
     expect(db.getItems("pandas", "hats")).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 1,
-          "type": "bowler",
-        },
-      ]
+      {
+        "count": 1,
+        "items": [
+          {
+            "id": 1,
+            "type": "bowler",
+          },
+        ],
+      }
     `);
   });
 
   it("returns false if the record doesn't exist", () => {
     expect(db.replaceById("pandas", "hats", 2, { type: "bowler" })).toBe(false);
     expect(db.getItems("pandas", "hats")).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 1,
-          "type": "panama",
-        },
-      ]
+      {
+        "count": 1,
+        "items": [
+          {
+            "id": 1,
+            "type": "panama",
+          },
+        ],
+      }
     `);
   });
 });
@@ -144,31 +153,40 @@ describe("patching records in the store", () => {
   });
 
   it("patches the record in the store", () => {
-    expect(db.getItems("pandas", "hats")).toStrictEqual([
-      {
-        id: 1,
-        type: "panama",
-      },
-    ]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "panama",
+        },
+      ],
+    });
     db.patchById("pandas", "hats", 1, { size: "medium" });
-    expect(db.getItems("pandas", "hats")).toStrictEqual([
-      {
-        id: 1,
-        size: "medium",
-        type: "panama",
-      },
-    ]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          size: "medium",
+          type: "panama",
+        },
+      ],
+    });
   });
 
   it("returns false if the record doesn't exist", () => {
     expect(db.patchById("pandas", "hats", 2, { type: "bowler" })).toBe(false);
     expect(db.getItems("pandas", "hats")).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 1,
-          "type": "panama",
-        },
-      ]
+      {
+        "count": 1,
+        "items": [
+          {
+            "id": 1,
+            "type": "panama",
+          },
+        ],
+      }
     `);
   });
 });
@@ -181,12 +199,15 @@ describe("deleting an item from a collection", () => {
   });
 
   it("removes an existing item", () => {
-    expect(db.getItems("pandas", "hats")).toStrictEqual([
-      {
-        id: 1,
-        type: "panama",
-      },
-    ]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "panama",
+        },
+      ],
+    });
     db.deleteById("pandas", "hats", 1);
     expect(db.getItems("pandas", "hats")).toStrictEqual([]);
   });
@@ -208,18 +229,21 @@ describe("filtering records  in the store with expressions", () => {
   it("selects for size >= 3", () => {
     const hats = db.getItems("pandas", "hats", { where: "_.size >= 3" });
     expect(hats).toMatchInlineSnapshot(`
-      [
-        {
-          "id": 1,
-          "size": 3,
-          "type": "panama",
-        },
-        {
-          "id": 3,
-          "size": 4,
-          "type": "trucker",
-        },
-      ]
+      {
+        "count": 2,
+        "items": [
+          {
+            "id": 1,
+            "size": 3,
+            "type": "panama",
+          },
+          {
+            "id": 3,
+            "size": 4,
+            "type": "trucker",
+          },
+        ],
+      }
     `);
   });
 });

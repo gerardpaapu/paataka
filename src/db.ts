@@ -142,32 +142,38 @@ export function getItems(
     };
   }
 
-  const items = connection
+  const rows = connection
     .prepare(
       `
-    SELECT records.*, json(data) as json
-    FROM collections
-    LEFT OUTER JOIN records ON records.collection_id = collections.id
-    WHERE collections.organisation_name = ?
-    AND collections.name = ?
-    ${WHERE.sql}
-    ${ORDER_BY.sql}
+    WITH results AS (
+         SELECT records.id as id
+               , json(data) as json
+          FROM collections
+          LEFT OUTER JOIN records ON records.collection_id = collections.id
+          WHERE collections.organisation_name = ?
+          AND collections.name = ?
+          ${WHERE.sql}
+          ${ORDER_BY.sql}
+    )
+    SELECT *, (SELECT count(*) FROM results) as count FROM results
   `,
     )
     .all(org, collection, ...WHERE.params, ...ORDER_BY.params) as any[];
 
-  if (items.length === 0) {
+  if (rows.length === 0) {
     return undefined;
   }
 
-  if (items.length === 1 && items[0].data == undefined) {
+  if (rows.length === 1 && rows[0].json == undefined) {
     return [];
   }
-
-  return items.map((row) => {
+  const { count } = rows[0];
+  const items = rows.map((row) => {
     const { json, id } = row;
     return { id, ...JSON.parse(json) };
   });
+
+  return { count, items };
 }
 
 export function getById(org: string, collection: string, id: number) {
