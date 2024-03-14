@@ -58,6 +58,26 @@ export function tokenize(src: Source): Token[] {
       case undefined:
         return tokens;
 
+      case "&": {
+        pop(src);
+        if (pop(src) !== "&") {
+          throw new Error('Invalid token "&"');
+        }
+
+        tokens.push({ type: "OP_AND" });
+        break;
+      }
+
+      case "|": {
+        pop(src);
+        if (pop(src) !== "|") {
+          throw new Error('Invalid token "|"');
+        }
+
+        tokens.push({ type: "OP_OR" });
+        break;
+      }
+
       case "-":
         pop(src);
         tokens.push({ type: "OP_MINUS" });
@@ -113,7 +133,7 @@ export function tokenize(src: Source): Token[] {
       case "=":
         pop(src);
         if (pop(src) !== "=") {
-          throw new Error();
+          throw new Error('Invalid token "="');
         }
 
         tokens.push({ type: "OP_EQ" });
@@ -155,7 +175,13 @@ export function tokenize(src: Source): Token[] {
         break;
 
       default: {
-        let value = readIdentifier(src);
+        const value = readIdentifier(src);
+        if (value == undefined) {
+          throw new Error(
+            `invalid identifier: ${src.str.slice(src.idx, src.idx + 3)}`,
+          );
+        }
+
         tokens.push({ type: "IDENTIFIER", value });
       }
     }

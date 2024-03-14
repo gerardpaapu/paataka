@@ -72,13 +72,17 @@ router.get("/:organisation/:collection", (req, res, next) => {
     return;
   }
 
-  const data = db.getItems(organisation, collection, opts);
-  if (data == undefined) {
-    res.sendStatus(StatusCodes.NOT_FOUND);
-    return;
-  }
+  try {
+    const data = db.getItems(organisation, collection, opts);
+    if (data == undefined) {
+      res.sendStatus(StatusCodes.NOT_FOUND);
+      return;
+    }
 
-  res.json(data);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get("/:organisation/:collection/:id", (req, res, next) => {

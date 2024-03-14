@@ -48,6 +48,7 @@ function parseAtom(tokens: Token[]): AstNode {
       if (close == undefined || close.type !== "CLOSE_PAREN") {
         throw new Error();
       }
+      return expr;
     }
 
     case "IDENTIFIER":

@@ -216,6 +216,7 @@ describe("listing objects in a collection", () => {
 describe("filtering objects in a collection with expressions", () => {
   let token: string;
   beforeEach(() => {
+    db.reset();
     db.createOrganisation("pandas");
     const { key } = db.getOrganisation(1);
     token = key.toString("base64url");
@@ -243,6 +244,93 @@ describe("filtering objects in a collection with expressions", () => {
             "id": 3,
             "size": 3,
             "type": "cowboy",
+          },
+          {
+            "id": 4,
+            "size": 7,
+            "type": "sombrero",
+          },
+        ],
+      }
+    `);
+  });
+
+  it("filters to hats size 3 or bowlers", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: '_.size == 3 || _.type == "bowler"' })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "count": 2,
+        "items": [
+          {
+            "id": 1,
+            "size": 2,
+            "type": "bowler",
+          },
+          {
+            "id": 3,
+            "size": 3,
+            "type": "cowboy",
+          },
+        ],
+      }
+    `);
+  });
+
+  it("filters to hats size 3 or bowlers", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({
+        where: '(_.size >= 3 && _.type == "cowboy") || _.type == "bowler"',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "count": 2,
+        "items": [
+          {
+            "id": 1,
+            "size": 2,
+            "type": "bowler",
+          },
+          {
+            "id": 3,
+            "size": 3,
+            "type": "cowboy",
+          },
+        ],
+      }
+    `);
+  });
+
+  it("inverting conditions", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({
+        where: '!(_.size >= 3 && _.type == "cowboy")',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "count": 3,
+        "items": [
+          {
+            "id": 1,
+            "size": 2,
+            "type": "bowler",
+          },
+          {
+            "id": 2,
+            "size": 1,
+            "type": "top hat",
           },
           {
             "id": 4,
