@@ -98,16 +98,16 @@ const res = await request
   })
   .auth(API_TOKEN, { type: "bearer" });
 
-const data = res.body
+const data = res.body;
 ```
 
 or using web standard APIs:
 
 ```js
-const url = new URL('https://paataka.cloud/api/_/clown/shoes')
-url.params.set('where', '_.size >= 5 && _.color == "blue"')
-const res = await fetch(url)
-const data = await res.json()
+const url = new URL("https://paataka.cloud/api/_/clown/shoes");
+url.params.set("where", '_.size >= 5 && _.color == "blue"');
+const res = await fetch(url);
+const data = await res.json();
 ```
 
 So, while there are cases where you end up looking at the URL and it's not-ideal, it is explicitly a non-goal of this
@@ -132,6 +132,16 @@ const res = await request
   .auth(API_TOKEN, { type: "bearer" });
 ```
 
+## Functions and methods
+
+We implement two special methods `.toUpperCase()` and `.toLowerCase()`.
+
+Of course, these are not real method-calls, `_.toUpperCase()` is compiled to the SQL function `UPPER(_)` and `_.toLowerCase()` is compiled to `LOWER(_)`
+
+The syntax is purely to give the queries a more JavaScript-ish feel.
+
+We implement one function `like(str, pattern)` which compiles directly to the SQL function `LIKE(pattern, str)` which has the same semantics as the SQL builtin `str LIKE pattern`.
+
 ## Weird stuff
 
 The expressions are pretty general, so you can use them on either side
@@ -154,4 +164,3 @@ So for this object ...
 ```js
 _.rangers[_.active] == "t-rex";
 ```
-

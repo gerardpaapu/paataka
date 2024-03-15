@@ -7,7 +7,7 @@ import {
 } from "./tokenizer.ts";
 import { type AstNode } from "./ast.ts";
 import * as Ast from "./ast.ts";
-import { source } from "./source.ts";
+import { peek, source } from "./source.ts";
 
 //
 // atom := literal
@@ -52,9 +52,37 @@ function parseAtom(tokens: Token[]): AstNode {
     }
 
     case "IDENTIFIER":
-      if (token.value !== "_" && token.value !== "id") {
-        throw new Error(`Invalid identifier: ${token.value}`);
+      if (!token.value) {
+        throw new Error();
       }
+
+      if (tokens[0]?.type === "OPEN_PAREN") {
+        let args = [] as AstNode[];
+        tokens.shift(); // drop the (
+
+        if (!tokens.length) {
+          throw new Error("Unexpected EOF in argument list");
+        }
+
+        let next = tokens[0];
+        if (next && next.type === "CLOSE_PAREN") {
+          tokens.shift();
+        } else {
+          args.push(parseExpr(tokens));
+          // @ts-expect-error I think this is a bug in tsc
+          while (tokens[0].type === "COMMA") {
+            tokens.shift();
+            args.push(parseExpr(tokens));
+          }
+
+          let close = tokens.shift();
+          if (close?.type !== "CLOSE_PAREN") {
+            throw new Error("Expected close paren");
+          }
+        }
+        return Ast.funcall(token.value, ...args);
+      }
+
       return Ast.id(token.value);
 
     case "STRING_LITERAL":
@@ -68,7 +96,8 @@ function parseAtom(tokens: Token[]): AstNode {
   }
 }
 
-// accessor := accessor '.' symbol
+// accessor := accessor '.' symbol '()'
+//          := accessor '.' symbol
 //          := accessor '[' expr ']'
 //          := atom
 function parseAccessor(tokens: Token[]): AstNode {
@@ -86,7 +115,16 @@ function parseAccessor(tokens: Token[]): AstNode {
         throw new Error('Missing identifier after "."');
       }
 
-      lhs = { type: "Dot", value: [lhs, prop.value] };
+      if (tokens[0]?.type === "OPEN_PAREN") {
+        tokens.shift();
+        if (tokens.shift()?.type !== "CLOSE_PAREN") {
+          throw new Error("method syntax doesn't allow for arguments yet");
+        }
+
+        lhs = { type: "MethodCall", value: [lhs, prop.value, []] };
+      } else {
+        lhs = { type: "Dot", value: [lhs, prop.value] };
+      }
     } else if (next.type === "OPEN_BRACKET") {
       tokens.shift(); // eat the bracket
       let key = parseExpr(tokens);

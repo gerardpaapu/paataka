@@ -11,6 +11,40 @@ function sql(sql: string, params: unknown[]): Sql {
 
 export function compile(ast: AstNode): Sql {
   switch (ast.type) {
+    case "FunCall":
+      return ($) => {
+        const [name, ..._args] = ast.value;
+        if (name !== "like" || _args.length !== 2) {
+          throw new Error(`Unknown function ${name} (${_args.length})`);
+        }
+
+        const argsSql = [] as string[];
+        const argsParams = [] as unknown[];
+        for (const ast of _args) {
+          const { sql, params } = compile(ast)($);
+          argsSql.push(sql);
+          argsParams.push(params);
+        }
+
+        return {
+          sql: `like(${argsSql[1]}, ${argsSql[0]})`,
+          params: argsParams,
+        };
+      };
+    case "MethodCall":
+      return ($) => {
+        const [obj, name] = ast.value;
+        const { sql, params } = compile(obj)($);
+
+        if (name === "toLowerCase") {
+          return { sql: `LOWER(${sql})`, params: [...params] };
+        }
+        if (name === "toUpperCase") {
+          return { sql: `UPPER(${sql})`, params: [...params] };
+        }
+
+        throw new Error(`Unknown method: ${name}`);
+      };
     case "Id":
       return ($) => {
         if (ast.value === "id") {

@@ -16,6 +16,7 @@ export type TokenType =
   | BinOp
   | PrefixOp
   | "DOT"
+  | "COMMA"
   | "OPEN_BRACKET"
   | "CLOSE_BRACKET"
   | "STRING_LITERAL"
@@ -172,6 +173,11 @@ export function tokenize(src: Source): Token[] {
       case ".":
         pop(src);
         tokens.push({ type: "DOT" });
+        break;
+
+      case ",":
+        pop(src);
+        tokens.push({ type: "COMMA" });
         break;
 
       default: {

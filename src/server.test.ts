@@ -627,6 +627,7 @@ describe("deleting objects from a collection", () => {
 
     expect(res.statusCode).toBe(StatusCodes.NO_CONTENT);
   });
+
   it("fails with a bad token", async () => {
     const res = await request(server)
       .delete("/api/_/pandas/hats/2")
@@ -641,5 +642,71 @@ describe("deleting objects from a collection", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(StatusCodes.NOT_FOUND);
+  });
+});
+
+describe("filtering with .toLowerCase()", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "BoWlEr" });
+    db.addItemToCollection("pandas", "hats", { type: "sombrero" });
+  });
+
+  it("converts a string to lowercase", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: '_.type.toLowerCase() == "bowler"',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "BoWlEr",
+        },
+      ],
+    });
+  });
+});
+
+describe("filtering with like(...)", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler" });
+    db.addItemToCollection("pandas", "hats", { type: "sombrero" });
+  });
+
+  it("keeps matches", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: 'like(_.type, "%brero")',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 2,
+          type: "sombrero",
+        },
+      ],
+    });
   });
 });
