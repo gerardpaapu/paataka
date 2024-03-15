@@ -571,7 +571,11 @@ describe("patching objects in a collection", () => {
       .send({ type: "candelabra" })
       .auth(token, { type: "bearer" });
 
-    expect(res.statusCode).toBe(StatusCodes.NO_CONTENT);
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toStrictEqual({
+      id: 2,
+      type: "candelabra",
+    });
     expect(db.getItems("pandas", "hats")).toStrictEqual({
       count: 2,
       items: [

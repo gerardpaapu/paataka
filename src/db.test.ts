@@ -176,7 +176,9 @@ describe("patching records in the store", () => {
   });
 
   it("returns false if the record doesn't exist", () => {
-    expect(db.patchById("pandas", "hats", 2, { type: "bowler" })).toBe(false);
+    expect(db.patchById("pandas", "hats", 2, { type: "bowler" })).toBe(
+      undefined,
+    );
     expect(db.getItems("pandas", "hats")).toMatchInlineSnapshot(`
       {
         "count": 1,

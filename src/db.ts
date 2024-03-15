@@ -266,11 +266,20 @@ export function patchById(
     FROM collections
     WHERE name = ? 
     AND organisation_name = ?)
+  RETURNING id, json(data) as json
   `,
     )
-    .run(JSON.stringify(value), id, collection, org);
+    .get(JSON.stringify(value), id, collection, org);
 
-  return result.changes === 1;
+  if (result != undefined) {
+    const { id, json } = result as any;
+    return {
+      id,
+      ...JSON.parse(json),
+    };
+  }
+
+  return undefined;
 }
 
 export function deleteById(org: string, collection: string, id: number) {

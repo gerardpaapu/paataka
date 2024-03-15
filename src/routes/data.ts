@@ -151,13 +151,13 @@ router.patch("/:organisation/:collection/:id", (req, res, next) => {
     return;
   }
 
-  const success = db.patchById(organisation, collection, _id, req.body);
-  if (!success) {
+  const result = db.patchById(organisation, collection, _id, req.body);
+  if (result == undefined) {
     res.sendStatus(StatusCodes.NOT_FOUND);
     return;
   }
 
-  res.sendStatus(StatusCodes.NO_CONTENT);
+  res.json(result);
 });
 
 router.delete("/:organisation/:collection/:id", (req, res, next) => {
