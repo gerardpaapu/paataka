@@ -136,7 +136,10 @@ describe("adding objects to a collection", () => {
       .send({ type: "bowler", size: "XS" });
 
     expect(res.statusCode).toBe(StatusCodes.UNAUTHORIZED);
-    expect(db.getItems("pandas", "hats")).toStrictEqual([]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 0,
+      items: [],
+    });
   });
 
   it("rejects random API key", async () => {
@@ -146,7 +149,10 @@ describe("adding objects to a collection", () => {
       .auth("INVALID_TOKEN", { type: "bearer" });
 
     expect(res.statusCode).toBe(StatusCodes.UNAUTHORIZED);
-    expect(db.getItems("pandas", "hats")).toStrictEqual([]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 0,
+      items: [],
+    });
   });
 
   it("rejects expired API key", async () => {
@@ -747,6 +753,35 @@ describe("filtering with like(...)", () => {
           tags: ["old-school", "stylish", "little"],
         },
       ],
+    });
+  });
+});
+
+describe("An empty result set", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler", size: 2 });
+    db.addItemToCollection("pandas", "hats", { type: "top hat", size: 1 });
+    db.addItemToCollection("pandas", "hats", { type: "cowboy", size: 3 });
+
+    db.addItemToCollection("pandas", "hats", { type: "sombrero", size: 7 });
+  });
+
+  it("is still a success", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: '_.type == "derby"' })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 0,
+      items: [],
     });
   });
 });

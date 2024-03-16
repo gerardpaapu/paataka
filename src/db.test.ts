@@ -211,7 +211,10 @@ describe("deleting an item from a collection", () => {
       ],
     });
     db.deleteById("pandas", "hats", 1);
-    expect(db.getItems("pandas", "hats")).toStrictEqual([]);
+    expect(db.getItems("pandas", "hats")).toStrictEqual({
+      count: 0,
+      items: [],
+    });
   });
 
   it("returns false if the item doesn't exist", () => {

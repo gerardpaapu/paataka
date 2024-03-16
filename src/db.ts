@@ -6,71 +6,68 @@ export function reset() {
   return connection.exec("DELETE FROM organisations");
 }
 
+const GET_ORG_QUERY = connection.prepare(
+  "SELECT * FROM organisations WHERE id = ?",
+);
 export function getOrganisation(id: number | bigint) {
-  return connection
-    .prepare("SELECT * FROM organisations WHERE id = ?")
-    .get(id) as OrganisationWithSecrets;
+  return GET_ORG_QUERY.get(id) as OrganisationWithSecrets;
 }
 
+const GET_ORG_BY_NAME_QUERY = connection.prepare(
+  "SELECT * FROM organisations WHERE name = ?",
+);
 export function getOrganisationByName(name: string) {
-  return connection
-    .prepare("SELECT * FROM organisations WHERE name = ?")
-    .get(name) as OrganisationWithSecrets;
+  return GET_ORG_BY_NAME_QUERY.get(name) as OrganisationWithSecrets;
 }
-
+const REFRESH_KEY_QUERY = connection.prepare(
+  `
+  UPDATE organisations
+  SET key = randomblob(8)
+  WHERE name = ? AND code = ?
+  RETURNING key
+`,
+);
 export function refreshKey(organisation: string, code: Buffer) {
-  return connection
-    .prepare(
-      `
-      UPDATE organisations
-      SET key = randomblob(8)
-      WHERE name = ? AND code = ?
-      RETURNING key
-    `,
-    )
-    .pluck()
-    .get(organisation, code) as Buffer | undefined;
+  return REFRESH_KEY_QUERY.pluck().get(organisation, code) as
+    | Buffer
+    | undefined;
 }
 
+const VALIDATE_KEY_QUERY = connection.prepare(
+  `SELECT name FROM organisations WHERE key = ?`,
+);
 export function validateKey(key: Buffer) {
-  return connection
-    .prepare(
-      `
-      SELECT name 
-      FROM organisations
-      WHERE key = ?
-      `,
-    )
-    .pluck()
-    .get(key) as string;
+  return VALIDATE_KEY_QUERY.pluck().get(key) as string;
 }
 
+const GET_ORGANISATIONS_QUERY = connection.prepare(
+  "SELECT id, name FROM organisations ORDER BY id",
+);
 export function getOrganisations() {
-  return connection
-    .prepare("SELECT id, name FROM organisations ORDER BY id")
-    .all() as Organisation[];
+  return GET_ORGANISATIONS_QUERY.all() as Organisation[];
 }
 
+const CREATE_ORGANISATION_QUERY = connection.prepare(
+  "INSERT INTO organisations (name) VALUES (?)",
+);
 export function createOrganisation(name: string) {
-  const res = connection
-    .prepare("INSERT INTO organisations (name) VALUES (?)")
-    .run(name);
+  const res = CREATE_ORGANISATION_QUERY.run(name);
   return res.lastInsertRowid;
 }
 
+const DELETE_ORGANISATION_QUERY = connection.prepare(
+  "DELETE FROM organisations WHERE name = ?",
+);
 export function deleteOrganisation(name: string) {
-  const res = connection
-    .prepare("DELETE FROM organisations WHERE name = ?")
-    .run(name);
+  const res = DELETE_ORGANISATION_QUERY.run(name);
   return res.changes === 1;
 }
 
+const GET_COLLECTIONS_QUERY = connection.prepare(
+  "SELECT * FROM collections WHERE organisation_name = ?",
+);
 export function getCollections(organisation: string) {
-  const res = connection
-    .prepare("SELECT * FROM collections WHERE organisation_name = ?")
-    .all(organisation) as Collection[];
-
-  return res;
+  return GET_COLLECTIONS_QUERY.all(organisation) as Collection[];
 }
 
 export function createCollection(organisation: string, name: string) {
@@ -131,7 +128,7 @@ export function getItems(org: string, collection: string, features?: Features) {
   if (features && features.where && typeof features.where === "string") {
     const { sql, params } = compileExpr(features.where);
     WHERE = {
-      sql: `AND (${sql})\n`,
+      sql: `WHERE (records.id IS NULL OR (${sql}))\n`,
       params,
     };
   }
@@ -162,15 +159,17 @@ export function getItems(org: string, collection: string, features?: Features) {
       `
     WITH results AS (
          SELECT records.id as id
+               , records.data
                , json(data) as json
           FROM collections
-          LEFT OUTER JOIN records ON records.collection_id = collections.id
-          WHERE collections.organisation_name = ?
-          AND collections.name = ?
-          ${WHERE.sql}
-          ${ORDER_BY.sql}
+          JOIN records
+            ON  records.collection_id = collections.id
+            AND collections.organisation_name = ?
+            AND collections.name = ?
+          ${WHERE.sql}          
     )
     SELECT *, (SELECT count(*) FROM results) as count FROM results
+    ${ORDER_BY.sql}
     ${PAGING.sql}
   `,
     )
@@ -182,20 +181,31 @@ export function getItems(org: string, collection: string, features?: Features) {
       ...PAGING.params,
     ) as any[];
 
-  if (rows.length === 0) {
+  if (rows.length > 0) {
+    const { count } = rows[0];
+    const items = rows.map((row) => {
+      const { json, id } = row;
+      return { id, ...JSON.parse(json) };
+    });
+
+    return { count: count, items };
+  }
+
+  const check = connection
+    .prepare(
+      "SELECT * FROM collections WHERE name = ? and organisation_name = ? LIMIT 1",
+    )
+    .pluck()
+    .get(collection, org);
+
+  if (check == undefined) {
     return undefined;
   }
 
-  if (rows.length === 1 && rows[0].json == undefined) {
-    return [];
-  }
-  const { count } = rows[0];
-  const items = rows.map((row) => {
-    const { json, id } = row;
-    return { id, ...JSON.parse(json) };
-  });
-
-  return { count, items };
+  return {
+    count: 0,
+    items: [],
+  };
 }
 
 export function getById(org: string, collection: string, id: number) {
