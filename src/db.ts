@@ -125,7 +125,7 @@ export interface Features {
 
 export function getItems(org: string, collection: string, features?: Features) {
   let WHERE = { sql: "", params: [] as unknown[] };
-  if (features && features.where && typeof features.where === "string") {
+  if (features?.where) {
     const { sql, params } = compileExpr(features.where);
     WHERE = {
       sql: `WHERE (records.id IS NULL OR (${sql}))\n`,
@@ -134,8 +134,8 @@ export function getItems(org: string, collection: string, features?: Features) {
   }
 
   let ORDER_BY = { sql: "", params: [] as unknown[] };
-  if (typeof features?.orderBy === "string") {
-    const { sql, params } = compileExpr(features?.orderBy);
+  if (features?.orderBy) {
+    const { sql, params } = compileExpr(features.orderBy);
     const dir = features?.dir?.toLocaleLowerCase() === "desc" ? "DESC" : "ASC";
     ORDER_BY = {
       sql: `ORDER BY (${sql}) ${dir}\n`,

@@ -785,3 +785,26 @@ describe("An empty result set", () => {
     });
   });
 });
+
+describe("empty expressions are ignored", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler" });
+    db.addItemToCollection("pandas", "hats", { type: "sombrero" });
+  });
+
+  it("lists all the objects", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "", orderBy: "" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(2);
+  });
+});

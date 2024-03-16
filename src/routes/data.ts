@@ -42,11 +42,11 @@ router.get("/:organisation/:collection", (req, res, next) => {
   const { organisation, collection } = req.params;
   const { where, orderBy, dir, itemsPerPage, page } = req.query;
   const opts: db.Features = {};
-  if (typeof where === "string") {
+  if (typeof where === "string" && where.trim().length > 0) {
     opts.where = where;
   }
 
-  if (typeof orderBy === "string") {
+  if (typeof orderBy === "string" && orderBy.trim().length > 0) {
     opts.orderBy = orderBy;
   }
 
