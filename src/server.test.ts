@@ -710,3 +710,43 @@ describe("filtering with like(...)", () => {
     });
   });
 });
+
+describe("filtering with like(...)", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", {
+      type: "bowler",
+      tags: ["old-school", "stylish", "little"],
+    });
+    db.addItemToCollection("pandas", "hats", {
+      type: "sombrero",
+      tags: ["huge", "mexican", "fiesta"],
+    });
+  });
+
+  it("keeps matches", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: '_.tags.includes("old-school")',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
+          tags: ["old-school", "stylish", "little"],
+        },
+      ],
+    });
+  });
+});

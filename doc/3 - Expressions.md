@@ -134,7 +134,9 @@ const res = await request
 
 ## Functions and methods
 
-We implement two special methods `.toUpperCase()` and `.toLowerCase()`.
+We implement two methods on strings `.toUpperCase()` and `.toLowerCase()`, these behave similarly to their counterparts in JavaScript.
+
+We implement `array.includes()` to check for specific values inside arrays
 
 Of course, these are not real method-calls, `_.toUpperCase()` is compiled to the SQL function `UPPER(_)` and `_.toLowerCase()` is compiled to `LOWER(_)`
 

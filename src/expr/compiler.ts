@@ -33,7 +33,7 @@ export function compile(ast: AstNode): Sql {
       };
     case "MethodCall":
       return ($) => {
-        const [obj, name] = ast.value;
+        const [obj, name, ...args] = ast.value;
         const { sql, params } = compile(obj)($);
 
         if (name === "toLowerCase") {
@@ -41,6 +41,23 @@ export function compile(ast: AstNode): Sql {
         }
         if (name === "toUpperCase") {
           return { sql: `UPPER(${sql})`, params: [...params] };
+        }
+
+        if (name === "includes") {
+          if (args.length !== 1) {
+            throw new Error(
+              `Wrong number of arguments give to includes: ${args.length}`,
+            );
+          }
+
+          const arg = compile(args[0])($);
+
+          return {
+            sql: `(EXISTS (SELECT item.value as i
+                           FROM json_each(${sql}, '$') as item
+                           WHERE i = ${arg.sql}))`,
+            params: [...params, ...arg.params],
+          };
         }
 
         throw new Error(`Unknown method: ${name}`);

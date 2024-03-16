@@ -1,13 +1,6 @@
-import {
-  type Token,
-  tokenize,
-  TokenType,
-  tokenIsBinOp,
-  BinOp,
-} from "./tokenizer.ts";
+import { type Token, TokenType, BinOp } from "./tokenizer.ts";
 import { type AstNode } from "./ast.ts";
 import * as Ast from "./ast.ts";
-import { peek, source } from "./source.ts";
 
 //
 // atom := literal
@@ -57,29 +50,7 @@ function parseAtom(tokens: Token[]): AstNode {
       }
 
       if (tokens[0]?.type === "OPEN_PAREN") {
-        let args = [] as AstNode[];
-        tokens.shift(); // drop the (
-
-        if (!tokens.length) {
-          throw new Error("Unexpected EOF in argument list");
-        }
-
-        let next = tokens[0];
-        if (next && next.type === "CLOSE_PAREN") {
-          tokens.shift();
-        } else {
-          args.push(parseExpr(tokens));
-          // @ts-expect-error I think this is a bug in tsc
-          while (tokens[0].type === "COMMA") {
-            tokens.shift();
-            args.push(parseExpr(tokens));
-          }
-
-          let close = tokens.shift();
-          if (close?.type !== "CLOSE_PAREN") {
-            throw new Error("Expected close paren");
-          }
-        }
+        const args = parseArgs(tokens);
         return Ast.funcall(token.value, ...args);
       }
 
@@ -94,6 +65,35 @@ function parseAtom(tokens: Token[]): AstNode {
     default:
       throw new Error(`Unexpected ${token.type}`);
   }
+}
+
+function parseArgs(tokens: Token[]): AstNode[] {
+  let args = [] as AstNode[];
+  if (tokens.shift()?.type !== "OPEN_PAREN") {
+    throw new Error("Arguments should start with a Paren");
+  }
+
+  if (!tokens.length) {
+    throw new Error("Unexpected EOF in argument list");
+  }
+
+  let next = tokens[0];
+  if (next && next.type === "CLOSE_PAREN") {
+    tokens.shift();
+  } else {
+    args.push(parseExpr(tokens));
+    while (tokens[0].type === "COMMA") {
+      tokens.shift();
+      args.push(parseExpr(tokens));
+    }
+
+    let close = tokens.shift();
+    if (close?.type !== "CLOSE_PAREN") {
+      throw new Error("Expected close paren");
+    }
+  }
+
+  return args;
 }
 
 // accessor := accessor '.' symbol '()'
@@ -116,14 +116,11 @@ function parseAccessor(tokens: Token[]): AstNode {
       }
 
       if (tokens[0]?.type === "OPEN_PAREN") {
-        tokens.shift();
-        if (tokens.shift()?.type !== "CLOSE_PAREN") {
-          throw new Error("method syntax doesn't allow for arguments yet");
-        }
+        const args = parseArgs(tokens);
 
-        lhs = { type: "MethodCall", value: [lhs, prop.value, []] };
+        lhs = Ast.methodCall(lhs, prop.value, ...args);
       } else {
-        lhs = { type: "Dot", value: [lhs, prop.value] };
+        lhs = Ast.dot(lhs, prop.value);
       }
     } else if (next.type === "OPEN_BRACKET") {
       tokens.shift(); // eat the bracket

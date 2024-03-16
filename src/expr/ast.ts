@@ -6,7 +6,7 @@ export type AstNode =
   | { type: "Dot"; value: [node: AstNode, property: string] }
   | {
       type: "MethodCall";
-      value: [object: AstNode, name: string, arguments: AstNode[]];
+      value: [object: AstNode, name: string, ...arguments: AstNode[]];
     }
   | {
       type: "FunCall";
@@ -15,6 +15,10 @@ export type AstNode =
   | { type: "Bracket"; value: [node: AstNode, property: AstNode] }
   | { type: "BinOp"; operator: BinOp; value: [a: AstNode, b: AstNode] }
   | { type: "Prefix"; operator: PrefixOp; value: AstNode };
+
+export function dot(obj: AstNode, prop: string): AstNode {
+  return { type: "Dot", value: [obj, prop] };
+}
 
 export function str(value: string): AstNode {
   return { type: "Literal", value };
@@ -34,4 +38,12 @@ export function binop(operator: BinOp, a: AstNode, b: AstNode): AstNode {
 
 export function funcall(name: string, ...args: AstNode[]): AstNode {
   return { type: "FunCall", value: [name, ...args] };
+}
+
+export function methodCall(
+  obj: AstNode,
+  name: string,
+  ...args: AstNode[]
+): AstNode {
+  return { type: "MethodCall", value: [obj, name, ...args] };
 }
