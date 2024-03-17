@@ -4,6 +4,7 @@ import { compile } from "./compiler.ts";
 import { source } from "./source.ts";
 import { jsonToSql } from "./ast.ts";
 import { optimizeSqlExpr } from "./optimize.ts";
+import PaatakaExpressionError from "./PaatakaExpressionError.ts";
 
 export function compileExpr(expr: string) {
   try {
@@ -14,8 +15,7 @@ export function compileExpr(expr: string) {
     const ast2 = optimizeSqlExpr(jsonToSql(ast1));
     const { sql, params } = compile(ast2)("data");
     return { sql, params };
-  } catch (err) {
-    console.error(err);
-    throw err;
+  } catch (err: any) {
+    throw new PaatakaExpressionError("Unexpected error processing expression");
   }
 }

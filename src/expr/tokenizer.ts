@@ -1,4 +1,5 @@
 import { type Source, peek, pop, source, skipWhitespace } from "./source.ts";
+import PaatakaExpressionError from "./PaatakaExpressionError.ts";
 
 export type BinOp =
   | "OP_GT"
@@ -62,7 +63,7 @@ export function tokenize(src: Source): Token[] {
       case "&": {
         pop(src);
         if (pop(src) !== "&") {
-          throw new Error('Invalid token "&"');
+          throw new PaatakaExpressionError('Invalid token "&"');
         }
 
         tokens.push({ type: "OP_AND" });
@@ -72,7 +73,7 @@ export function tokenize(src: Source): Token[] {
       case "|": {
         pop(src);
         if (pop(src) !== "|") {
-          throw new Error('Invalid token "|"');
+          throw new PaatakaExpressionError('Invalid token "|"');
         }
 
         tokens.push({ type: "OP_OR" });
@@ -96,7 +97,7 @@ export function tokenize(src: Source): Token[] {
       case "9": {
         let value = readNumberLiteral(src);
         if (value == undefined) {
-          throw new Error("Invalid number literal");
+          throw new PaatakaExpressionError("Invalid number literal");
         }
         tokens.push({ type: "NUMBER_LITERAL", value: value });
         break;
@@ -105,7 +106,7 @@ export function tokenize(src: Source): Token[] {
       case '"': {
         let value = readStringLiteral(src);
         if (value == undefined) {
-          throw new Error("Invalid string literal");
+          throw new PaatakaExpressionError("Invalid string literal");
         }
         tokens.push({ type: "STRING_LITERAL", value });
         break;
@@ -134,7 +135,7 @@ export function tokenize(src: Source): Token[] {
       case "=":
         pop(src);
         if (pop(src) !== "=") {
-          throw new Error('Invalid token "="');
+          throw new PaatakaExpressionError('Invalid token "="');
         }
 
         tokens.push({ type: "OP_EQ" });
@@ -183,7 +184,7 @@ export function tokenize(src: Source): Token[] {
       default: {
         const value = readIdentifier(src);
         if (value == undefined) {
-          throw new Error(
+          throw new PaatakaExpressionError(
             `invalid identifier: ${src.str.slice(src.idx, src.idx + 3)}`,
           );
         }
@@ -268,5 +269,7 @@ function readStringLiteral(src: Source) {
     }
   }
 
-  throw new Error("Unexpected EOF in string starting at " + start);
+  throw new PaatakaExpressionError(
+    "Unexpected EOF in string starting at " + start,
+  );
 }

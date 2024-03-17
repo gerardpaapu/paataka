@@ -1,7 +1,8 @@
 import { type Token, TokenType, BinOp } from "./tokenizer.ts";
+import PaatakaExpressionError from "./PaatakaExpressionError.ts";
+
 import { type JsonNode } from "./ast.ts";
 import * as Ast from "./ast.ts";
-import { prependOnceListener } from "process";
 
 //
 // atom := literal
@@ -32,7 +33,7 @@ import { prependOnceListener } from "process";
 function parseAtom(tokens: Token[]): JsonNode {
   let token = tokens.shift();
   if (!token) {
-    throw new Error("Out of tokens");
+    throw new PaatakaExpressionError("Out of tokens");
   }
 
   switch (token.type) {
@@ -40,14 +41,14 @@ function parseAtom(tokens: Token[]): JsonNode {
       let expr = parseExpr(tokens);
       let close = tokens.shift();
       if (close == undefined || close.type !== "CLOSE_PAREN") {
-        throw new Error();
+        throw new PaatakaExpressionError();
       }
       return expr;
     }
 
     case "IDENTIFIER":
       if (!token.value) {
-        throw new Error();
+        throw new PaatakaExpressionError();
       }
 
       if (tokens[0]?.type === "OPEN_PAREN") {
@@ -56,7 +57,9 @@ function parseAtom(tokens: Token[]): JsonNode {
           case "like":
             return Ast.like(args[0], args[1]);
           default:
-            throw new Error(`Invalid function name: ${token.value}`);
+            throw new PaatakaExpressionError(
+              `Invalid function name: ${token.value}`,
+            );
         }
       }
 
@@ -69,18 +72,18 @@ function parseAtom(tokens: Token[]): JsonNode {
       return Ast.num(JSON.parse(token.value!) as number);
 
     default:
-      throw new Error(`Unexpected ${token.type}`);
+      throw new PaatakaExpressionError(`Unexpected ${token.type}`);
   }
 }
 
 function parseArgs(tokens: Token[]): JsonNode[] {
   let args = [] as JsonNode[];
   if (tokens.shift()?.type !== "OPEN_PAREN") {
-    throw new Error("Arguments should start with a Paren");
+    throw new PaatakaExpressionError("Arguments should start with a Paren");
   }
 
   if (!tokens.length) {
-    throw new Error("Unexpected EOF in argument list");
+    throw new PaatakaExpressionError("Unexpected EOF in argument list");
   }
 
   let next = tokens[0];
@@ -95,7 +98,7 @@ function parseArgs(tokens: Token[]): JsonNode[] {
 
     let close = tokens.shift();
     if (close?.type !== "CLOSE_PAREN") {
-      throw new Error("Expected close paren");
+      throw new PaatakaExpressionError("Expected close paren");
     }
   }
 
@@ -118,7 +121,7 @@ function parseAccessor(tokens: Token[]): JsonNode {
       tokens.shift();
       let prop = tokens.shift();
       if (!prop || prop.type !== "IDENTIFIER" || !prop.value) {
-        throw new Error('Missing identifier after "."');
+        throw new PaatakaExpressionError('Missing identifier after "."');
       }
 
       if (tokens[0]?.type === "OPEN_PAREN") {
@@ -132,7 +135,7 @@ function parseAccessor(tokens: Token[]): JsonNode {
       let key = parseExpr(tokens);
       let close = tokens.shift(); // eat the closing bracket
       if (!close || close.type !== "CLOSE_BRACKET") {
-        throw new Error('Missing "]"');
+        throw new PaatakaExpressionError('Missing "]"');
       }
       lhs = Ast.bracket(lhs, key);
     } else {
@@ -228,7 +231,7 @@ function parseExpr(tokens: Token[]): JsonNode {
 export function parse(tokens: Token[]): JsonNode {
   const expr = parseExpr(tokens);
   if (tokens.length !== 0) {
-    throw new Error("Trailing tokens");
+    throw new PaatakaExpressionError("Trailing tokens");
   }
 
   return expr;

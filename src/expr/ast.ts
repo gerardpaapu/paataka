@@ -1,4 +1,5 @@
 import { type BinOp, type PrefixOp } from "./tokenizer.ts";
+import PaatakaExpressionError from "./PaatakaExpressionError.ts";
 
 export type JsonNode =
   | { type: "Id"; value: string }
@@ -89,23 +90,29 @@ export function methodCall(
   switch (prop) {
     case "toLowerCase":
       if (args.length !== 0) {
-        throw new Error(`Wrong number of arguments to toLowerCase`);
+        throw new PaatakaExpressionError(
+          `Wrong number of arguments to toLowerCase`,
+        );
       }
       return toLower(obj);
     case "toUpper":
       if (args.length !== 0) {
-        throw new Error(`Wrong number of arguments to toUpperCase`);
+        throw new PaatakaExpressionError(
+          `Wrong number of arguments to toUpperCase`,
+        );
       }
       return toUpper(obj);
 
     case "includes":
       if (args.length !== 1) {
-        throw new Error(`Wrong number of arguments to includes`);
+        throw new PaatakaExpressionError(
+          `Wrong number of arguments to includes`,
+        );
       }
 
       return includes(obj, args[0]);
     default:
-      throw new Error(`Unknown method: ${prop}`);
+      throw new PaatakaExpressionError(`Unknown method: ${prop}`);
   }
 }
 

@@ -820,7 +820,7 @@ describe("An empty result set", () => {
   });
 });
 
-describe("empty expressions are ignored", () => {
+describe("Invalid expressions", () => {
   let token: string;
   beforeEach(() => {
     db.createOrganisation("pandas");
@@ -832,7 +832,7 @@ describe("empty expressions are ignored", () => {
     db.addItemToCollection("pandas", "hats", { type: "sombrero" });
   });
 
-  it("lists all the objects", async () => {
+  it("empty expressions are ignored", async () => {
     const res = await request(server)
       .get("/api/_/pandas/hats")
       .query({ where: "", orderBy: "" })
@@ -840,5 +840,15 @@ describe("empty expressions are ignored", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(2);
+  });
+
+  it("invalid expressions are unprocessable", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "like(a," })
+      .auth(token, { type: "bearer" });
+
+    expect(res.status).toBe(StatusCodes.UNPROCESSABLE_ENTITY);
+    expect(res.body).toHaveProperty("error");
   });
 });

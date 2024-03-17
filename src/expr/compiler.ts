@@ -1,4 +1,5 @@
 import { JsonNode, SqlNode } from "./ast.ts";
+import PaatakaExpressionError from "./PaatakaExpressionError.ts";
 
 type Sql = (root: string) => {
   sql: string;
@@ -19,7 +20,7 @@ function compileJsonValue(ast: JsonNode): Sql {
           case "id":
             return { sql: "records.id", params: [] };
           default:
-            throw new Error(`Invalid identifier ${ast.value}`);
+            throw new PaatakaExpressionError(`Invalid identifier ${ast.value}`);
         }
       };
 
