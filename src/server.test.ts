@@ -716,8 +716,7 @@ describe("filtering with like(...)", () => {
     });
   });
 });
-
-describe("filtering with like(...)", () => {
+describe("filtering with includes", () => {
   let token: string;
   beforeEach(() => {
     db.createOrganisation("pandas");
@@ -728,14 +727,16 @@ describe("filtering with like(...)", () => {
     db.addItemToCollection("pandas", "hats", {
       type: "bowler",
       tags: ["old-school", "stylish", "little"],
+      sizes: [1, 2, 3],
     });
     db.addItemToCollection("pandas", "hats", {
       type: "sombrero",
       tags: ["huge", "mexican", "fiesta"],
+      sizes: [4, 5, 6],
     });
   });
 
-  it("keeps matches", async () => {
+  it("matches tags", async () => {
     const res = await request(server)
       .get("/api/_/pandas/hats/")
       .query({
@@ -751,9 +752,42 @@ describe("filtering with like(...)", () => {
           id: 1,
           type: "bowler",
           tags: ["old-school", "stylish", "little"],
+          sizes: [1, 2, 3],
         },
       ],
     });
+  });
+
+  it("matches size", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: "_.sizes.includes(5)",
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "count": 1,
+        "items": [
+          {
+            "id": 2,
+            "sizes": [
+              4,
+              5,
+              6,
+            ],
+            "tags": [
+              "huge",
+              "mexican",
+              "fiesta",
+            ],
+            "type": "sombrero",
+          },
+        ],
+      }
+    `);
   });
 });
 

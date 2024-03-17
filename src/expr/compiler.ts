@@ -1,4 +1,4 @@
-import { AstNode } from "./ast.ts";
+import { JsonNode, SqlNode } from "./ast.ts";
 
 type Sql = (root: string) => {
   sql: string;
@@ -9,154 +9,178 @@ function sql(sql: string, params: unknown[]): Sql {
   return (_) => ({ sql, params });
 }
 
-export function compile(ast: AstNode): Sql {
+function compileJsonValue(ast: JsonNode): Sql {
   switch (ast.type) {
-    case "FunCall":
-      return ($) => {
-        const [name, ..._args] = ast.value;
-        if (name !== "like" || _args.length !== 2) {
-          throw new Error(`Unknown function ${name} (${_args.length})`);
-        }
-
-        const argsSql = [] as string[];
-        const argsParams = [] as unknown[];
-        for (const ast of _args) {
-          const { sql, params } = compile(ast)($);
-          argsSql.push(sql);
-          argsParams.push(params);
-        }
-
-        return {
-          sql: `like(${argsSql[1]}, ${argsSql[0]})`,
-          params: argsParams,
-        };
-      };
-    case "MethodCall":
-      return ($) => {
-        const [obj, name, ...args] = ast.value;
-        const { sql, params } = compile(obj)($);
-
-        if (name === "toLowerCase") {
-          return { sql: `LOWER(${sql})`, params: [...params] };
-        }
-        if (name === "toUpperCase") {
-          return { sql: `UPPER(${sql})`, params: [...params] };
-        }
-
-        if (name === "includes") {
-          if (args.length !== 1) {
-            throw new Error(
-              `Wrong number of arguments give to includes: ${args.length}`,
-            );
-          }
-
-          const arg = compile(args[0])($);
-
-          return {
-            sql: `(EXISTS (SELECT item.value as i
-                           FROM json_each(${sql}, '$') as item
-                           WHERE i = ${arg.sql}))`,
-            params: [...params, ...arg.params],
-          };
-        }
-
-        throw new Error(`Unknown method: ${name}`);
-      };
     case "Id":
       return ($) => {
-        if (ast.value === "id") {
-          return { sql: "records.id", params: [] };
-        } else {
-          return { sql: $, params: [] };
+        switch (ast.value) {
+          case "_":
+            return { sql: $, params: [] };
+          case "id":
+            return { sql: "records.id", params: [] };
+          default:
+            throw new Error(`Invalid identifier ${ast.value}`);
         }
       };
 
-    case "Literal":
-      return sql("?", [ast.value]);
+    case "Dot":
+      return ($) => {
+        const [a, ...b] = ast.value;
+        const _a = compileJsonValue(a)($);
+        const _b = b.map((prop) => `.${prop}`).join("");
+        return {
+          sql: `jsonb(${_a.sql} -> '$${_b}')`,
+          params: _a.params,
+        };
+      };
 
-    case "Bracket": {
+    case "Bracket":
+      return ($) => {
+        const [a, b] = ast.value;
+        const _a = compileJsonValue(a)($);
+        const _b = compile(b)($);
+        return {
+          sql: `(${_a.sql}->${_b.sql})`,
+          params: [..._a.params, ..._b.params],
+        };
+      };
+
+    case "ToJson":
+      return ($) => {
+        const val = compile(ast.value)($);
+        return {
+          sql: `jsonb(json_quote(${val.sql}))`,
+          params: val.params,
+        };
+      };
+  }
+}
+
+export function compile(ast: SqlNode): Sql {
+  switch (ast.type) {
+    case "LiteralString":
+      return ($) => {
+        return {
+          sql: "?",
+          params: [ast.value],
+        };
+      };
+    case "LiteralNumber":
+      return ($) => {
+        return {
+          sql: "?",
+          params: [ast.value],
+        };
+      };
+
+    case "Like":
       return ($) => {
         const [a, b] = ast.value;
         const _a = compile(a)($);
         const _b = compile(b)($);
         return {
-          sql: `(${_a.sql})->(${_b.sql})`,
+          // don't forget to swap the order of arguments
+          sql: `like(${_b.sql}, ${_a.sql})`,
           params: [..._a.params, ..._b.params],
         };
       };
-    }
 
-    case "Dot":
+    case "Includes":
       return ($) => {
         const [a, b] = ast.value;
-        const lhs = compile(a)($);
+        const _a = compileJsonValue(a)($);
+        const _b = compile(b)($);
 
-        return { sql: `(${lhs.sql}) ->> '$.${b}'`, params: [...lhs.params] };
+        return {
+          sql: `(EXISTS (SELECT item.value as j
+                         FROM json_each(${_a.sql}) as item
+                         WHERE j = ${_b.sql}))`,
+          params: [..._a.params, ..._b.params],
+        };
+      };
+
+    case "ToLower":
+      return ($) => {
+        const val = compile(ast.value)($);
+        return {
+          sql: `LOWER(${val.sql})`,
+          params: [...val.params],
+        };
+      };
+
+    case "ToUpper":
+      return ($) => {
+        const val = compile(ast.value)($);
+        return {
+          sql: `UPPER(${val.sql})`,
+          params: [...val.params],
+        };
       };
 
     case "Prefix":
       return ($) => {
-        const v = compile(ast.value)($);
+        const val = compile(ast.value)($);
+        let sql =
+          ast.operator === "OP_MINUS" ? `(- ${val.sql})` : `(NOT ${val.sql})`;
+        return { sql, params: val.params };
+      };
 
-        switch (ast.operator) {
-          case "OP_MINUS":
-            return { sql: `(-${v.sql})`, params: [...v.params] };
-
-          case "OP_NEGATE":
-            return { sql: `(NOT ${v.sql})`, params: [...v.params] };
-        }
+    case "ToSql":
+      return ($) => {
+        const val = compileJsonValue(ast.value)($);
+        return {
+          sql: `(${val.sql}->>'$')`,
+          params: val.params,
+        };
       };
 
     case "BinOp":
       return ($) => {
         const [a, b] = ast.value;
-        const lhs = compile(a)($);
-        const rhs = compile(b)($);
-        const params = [...lhs.params, ...rhs.params];
+        const _a = compile(a)($);
+        const _b = compile(b)($);
+        const params = [..._a.params, ..._b.params];
+
         switch (ast.operator) {
-          case "OP_AND":
-            return {
-              sql: `(${lhs.sql} AND ${rhs.sql})`,
-              params,
-            };
-
-          case "OP_OR":
-            return {
-              sql: `(${lhs.sql} OR ${rhs.sql})`,
-              params,
-            };
-          case "OP_EQ":
-            return {
-              sql: `(${lhs.sql} = ${rhs.sql})`,
-              params,
-            };
-          case "OP_LT":
-            return {
-              sql: `(${lhs.sql} < ${rhs.sql})`,
-              params,
-            };
-
-          case "OP_LTE":
-            return {
-              sql: `(${lhs.sql} <= ${rhs.sql})`,
-              params,
-            };
-
           case "OP_GT":
             return {
-              sql: `(${lhs.sql} > ${rhs.sql})`,
+              sql: `(${_a.sql} > ${_b.sql})`,
               params,
             };
 
           case "OP_GTE":
             return {
-              sql: `((${lhs.sql}) >= (${rhs.sql}))`,
+              sql: `(${_a.sql} >= ${_b.sql})`,
               params,
             };
-
+          case "OP_EQ":
+            return {
+              sql: `(${_a.sql} = ${_b.sql})`,
+              params,
+            };
+          case "OP_LT":
+            return {
+              sql: `(${_a.sql} < ${_b.sql})`,
+              params,
+            };
+          case "OP_LTE":
+            return {
+              sql: `(${_a.sql} <= ${_b.sql})`,
+              params,
+            };
           case "OP_NEQ":
             return {
-              sql: `(${lhs.sql} <> ${rhs.sql})`,
+              sql: `(${_a.sql} <> ${_b.sql})`,
+              params,
+            };
+          case "OP_AND":
+            return {
+              sql: `(${_a.sql} AND ${_b.sql})`,
+              params,
+            };
+          case "OP_OR":
+            return {
+              sql: `(${_a.sql} OR ${_b.sql})`,
               params,
             };
         }

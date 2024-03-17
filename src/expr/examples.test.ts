@@ -1,8 +1,6 @@
 import { describe, it, test, expect, beforeEach } from "vitest";
 import connection from "../connection.ts";
 import * as db from "../db.ts";
-import { compile } from "./compiler.ts";
-import { parse } from "./parser.ts";
 import { compileExpr } from "./index.ts";
 import { tokenize } from "./tokenizer.ts";
 import { source } from "./source.ts";
@@ -24,6 +22,7 @@ describe("filtering data", () => {
     db.addItemToCollection("pandas", "hats", {
       key: "bar",
       foo: { bar: "box" },
+      bux: [1, 2, 3],
       baz: { quux: 3 },
     });
 
@@ -43,9 +42,9 @@ describe("filtering data", () => {
 
     expect(result).toMatchInlineSnapshot(`
       [
-        ""baz"",
-        ""box"",
-        ""biz"",
+        "baz",
+        "box",
+        "biz",
       ]
     `);
   });
@@ -57,7 +56,7 @@ describe("filtering data", () => {
         "params": [
           3,
         ],
-        "sql": "((((data) ->> '$.baz') ->> '$.quux') >= (?))",
+        "sql": "((jsonb(data -> '$.baz.quux')->>'$') >= ?)",
       }
     `);
 
@@ -69,7 +68,7 @@ describe("filtering data", () => {
     expect(result).toMatchInlineSnapshot(`
       [
         "{"key":"bar","foo":{"bar":"baz"},"baz":{"quux":7}}",
-        "{"key":"bar","foo":{"bar":"box"},"baz":{"quux":3}}",
+        "{"key":"bar","foo":{"bar":"box"},"bux":[1,2,3],"baz":{"quux":3}}",
       ]
     `);
   });
@@ -101,11 +100,58 @@ describe("filtering data", () => {
     `);
 
     const { sql, params } = compileExpr('_.author == "moon denier"');
-    expect(sql).toMatchInlineSnapshot(`"((data) ->> '$.author' = ?)"`);
+    expect(sql).toMatchInlineSnapshot(
+      `"((jsonb(data -> '$.author')->>'$') = ?)"`,
+    );
   });
 
   it("can reference the id", () => {
     const { sql } = compileExpr("id >= 23");
-    expect(sql).toMatchInlineSnapshot(`"((records.id) >= (?))"`);
+    expect(sql).toMatchInlineSnapshot(`"((records.id->>'$') >= ?)"`);
+  });
+
+  it("can call the like function", () => {
+    const { sql, params } = compileExpr('like("fart", "%art")');
+    expect({ sql, params }).toMatchInlineSnapshot(
+      `
+      {
+        "params": [
+          "fart",
+          "%art",
+        ],
+        "sql": "like(?, ?)",
+      }
+    `,
+    );
+  });
+
+  it("can call the .includes method", () => {
+    const { sql, params } = compileExpr("_.foo.includes(2)");
+    expect({ sql, params }).toMatchInlineSnapshot(`
+      {
+        "params": [
+          2,
+        ],
+        "sql": "(EXISTS (SELECT item.value as j
+                               FROM json_each(jsonb(data -> '$.foo')) as item
+                               WHERE j = ?))",
+      }
+    `);
+
+    const result = connection
+      .prepare(
+        `WITH t(data) AS (SELECT jsonb('{ "foo": [1, 2, 3] }'))
+         SELECT json(data) FROM t
+         WHERE ${sql}`,
+      )
+      .all(...params);
+
+    expect(result).toMatchInlineSnapshot(`
+      [
+        {
+          "json(data)": "{"foo":[1,2,3]}",
+        },
+      ]
+    `);
   });
 });

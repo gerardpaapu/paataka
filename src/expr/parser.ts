@@ -1,6 +1,7 @@
 import { type Token, TokenType, BinOp } from "./tokenizer.ts";
-import { type AstNode } from "./ast.ts";
+import { type JsonNode } from "./ast.ts";
 import * as Ast from "./ast.ts";
+import { prependOnceListener } from "process";
 
 //
 // atom := literal
@@ -28,7 +29,7 @@ import * as Ast from "./ast.ts";
 // atom := literal
 //      := symbol
 //      := '(' expr  ')'
-function parseAtom(tokens: Token[]): AstNode {
+function parseAtom(tokens: Token[]): JsonNode {
   let token = tokens.shift();
   if (!token) {
     throw new Error("Out of tokens");
@@ -51,7 +52,12 @@ function parseAtom(tokens: Token[]): AstNode {
 
       if (tokens[0]?.type === "OPEN_PAREN") {
         const args = parseArgs(tokens);
-        return Ast.funcall(token.value, ...args);
+        switch (token.value) {
+          case "like":
+            return Ast.like(args[0], args[1]);
+          default:
+            throw new Error(`Invalid function name: ${token.value}`);
+        }
       }
 
       return Ast.id(token.value);
@@ -67,8 +73,8 @@ function parseAtom(tokens: Token[]): AstNode {
   }
 }
 
-function parseArgs(tokens: Token[]): AstNode[] {
-  let args = [] as AstNode[];
+function parseArgs(tokens: Token[]): JsonNode[] {
+  let args = [] as JsonNode[];
   if (tokens.shift()?.type !== "OPEN_PAREN") {
     throw new Error("Arguments should start with a Paren");
   }
@@ -100,7 +106,7 @@ function parseArgs(tokens: Token[]): AstNode[] {
 //          := accessor '.' symbol
 //          := accessor '[' expr ']'
 //          := atom
-function parseAccessor(tokens: Token[]): AstNode {
+function parseAccessor(tokens: Token[]): JsonNode {
   let lhs = parseAtom(tokens);
   for (;;) {
     if (tokens.length === 0) {
@@ -117,8 +123,7 @@ function parseAccessor(tokens: Token[]): AstNode {
 
       if (tokens[0]?.type === "OPEN_PAREN") {
         const args = parseArgs(tokens);
-
-        lhs = Ast.methodCall(lhs, prop.value, ...args);
+        lhs = Ast.methodCall(lhs, prop.value, args);
       } else {
         lhs = Ast.dot(lhs, prop.value);
       }
@@ -129,7 +134,7 @@ function parseAccessor(tokens: Token[]): AstNode {
       if (!close || close.type !== "CLOSE_BRACKET") {
         throw new Error('Missing "]"');
       }
-      lhs = { type: "Bracket", value: [lhs, key] };
+      lhs = Ast.bracket(lhs, key);
     } else {
       return lhs;
     }
@@ -139,14 +144,18 @@ function parseAccessor(tokens: Token[]): AstNode {
 // negated  := '!' negated
 //          := '-' negated
 //          := accessor
-function parseNegated(tokens: Token[]): AstNode {
+function parseNegated(tokens: Token[]): JsonNode {
   let token = tokens[0];
   let type = token.type;
 
   if (type === "OP_NEGATE" || type === "OP_MINUS") {
     tokens.shift()!;
     let inner = parseNegated(tokens);
-    return { type: "Prefix", operator: type, value: inner };
+    if (type === "OP_NEGATE") {
+      return Ast.not(inner);
+    }
+
+    return Ast.negative(inner);
   }
 
   return parseAccessor(tokens);
@@ -166,7 +175,7 @@ function isComparisonType(t: TokenType): t is BinOp {
   }
 }
 
-function parseComparison(tokens: Token[]): AstNode {
+function parseComparison(tokens: Token[]): JsonNode {
   let lhs = parseNegated(tokens);
   for (;;) {
     if (tokens.length === 0) {
@@ -177,7 +186,7 @@ function parseComparison(tokens: Token[]): AstNode {
     if (isComparisonType(token.type)) {
       tokens.shift();
       let rhs = parseNegated(tokens);
-      lhs = { type: "BinOp", operator: token.type, value: [lhs, rhs] };
+      lhs = Ast.binop(token.type, lhs, rhs);
     } else {
       return lhs;
     }
@@ -194,7 +203,7 @@ function isBooleanType(t: TokenType): t is BinOp {
   }
 }
 
-function parseBoolean(tokens: Token[]): AstNode {
+function parseBoolean(tokens: Token[]): JsonNode {
   let lhs = parseComparison(tokens);
   for (;;) {
     if (tokens.length === 0) {
@@ -205,18 +214,18 @@ function parseBoolean(tokens: Token[]): AstNode {
     if (isBooleanType(token.type)) {
       tokens.shift();
       let rhs = parseComparison(tokens);
-      lhs = { type: "BinOp", operator: token.type, value: [lhs, rhs] };
+      lhs = Ast.binop(token.type, lhs, rhs);
     } else {
       return lhs;
     }
   }
 }
 
-function parseExpr(tokens: Token[]): AstNode {
+function parseExpr(tokens: Token[]): JsonNode {
   return parseBoolean(tokens);
 }
 
-export function parse(tokens: Token[]): AstNode {
+export function parse(tokens: Token[]): JsonNode {
   const expr = parseExpr(tokens);
   if (tokens.length !== 0) {
     throw new Error("Trailing tokens");

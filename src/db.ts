@@ -128,7 +128,7 @@ export function getItems(org: string, collection: string, features?: Features) {
   if (features?.where) {
     const { sql, params } = compileExpr(features.where);
     WHERE = {
-      sql: `WHERE (records.id IS NULL OR (${sql}))\n`,
+      sql: `WHERE (records.id IS NULL OR (${sql}->>'$'))\n`,
       params,
     };
   }
@@ -138,7 +138,7 @@ export function getItems(org: string, collection: string, features?: Features) {
     const { sql, params } = compileExpr(features.orderBy);
     const dir = features?.dir?.toLocaleLowerCase() === "desc" ? "DESC" : "ASC";
     ORDER_BY = {
-      sql: `ORDER BY (${sql}) ${dir}\n`,
+      sql: `ORDER BY (${sql}->>'$') ${dir}\n`,
       params,
     };
   }
