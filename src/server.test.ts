@@ -458,14 +458,14 @@ describe('getting a specific "page" of results', () => {
     expect(res.statusCode).toBe(200);
     const result = res.body;
     expect(result.count).toBe(100);
+    expect(result.pageCount).toBe(5);
+    expect(result.itemsPerPage).toBe(20);
     expect(result.items).toHaveLength(20);
-    expect(result.items[19]).toMatchInlineSnapshot(`
-      {
-        "id": 20,
-        "size": 2,
-        "type": "hat-type-19",
-      }
-    `);
+    expect(result.items[19]).toStrictEqual({
+      id: 20,
+      size: 2,
+      type: "hat-type-19",
+    });
   });
 
   it("uses non-default page size", async () => {
@@ -477,14 +477,15 @@ describe('getting a specific "page" of results', () => {
     expect(res.statusCode).toBe(200);
     const result = res.body;
     expect(result.count).toBe(100);
+    expect(result.pageCount).toBe(20);
+    expect(result.itemsPerPage).toBe(5);
+
     expect(result.items).toHaveLength(5);
-    expect(result.items[4]).toMatchInlineSnapshot(`
-      {
-        "id": 5,
-        "size": 2,
-        "type": "hat-type-4",
-      }
-    `);
+    expect(result.items[4]).toStrictEqual({
+      id: 5,
+      size: 2,
+      type: "hat-type-4",
+    });
   });
 
   it("gets later pages", async () => {

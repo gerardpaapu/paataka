@@ -123,6 +123,12 @@ export interface Features {
   page?: number;
 }
 
+interface PagingInfo {
+  page: number;
+  pageCount: number;
+  itemsPerPage: number;
+}
+
 export function getItems(org: string, collection: string, features?: Features) {
   let WHERE = { sql: "", params: [] as unknown[] };
   if (features?.where) {
@@ -144,9 +150,16 @@ export function getItems(org: string, collection: string, features?: Features) {
   }
 
   let PAGING = { sql: "", params: [] as unknown[] };
+  let paging: PagingInfo | undefined;
   if (features?.page !== undefined) {
     let page = Math.floor(Math.max(0, features.page));
     let itemsPerPage = Math.floor(Math.max(0, features.itemsPerPage ?? 20));
+
+    paging = {
+      page,
+      itemsPerPage,
+      pageCount: -1,
+    };
 
     PAGING = {
       sql: `LIMIT ? OFFSET ?\n`,
@@ -188,7 +201,10 @@ export function getItems(org: string, collection: string, features?: Features) {
       return { id, ...JSON.parse(json) };
     });
 
-    return { count: count, items };
+    if (paging) {
+      paging.pageCount = Math.ceil(count / paging.itemsPerPage);
+    }
+    return { count, items, ...paging };
   }
 
   const check = connection
