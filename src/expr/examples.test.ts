@@ -154,4 +154,51 @@ describe("filtering data", () => {
       ]
     `);
   });
+
+  it("gets the length of an array", () => {
+    const { sql, params } = compileExpr("_.foo.length >= 2");
+
+    const result = connection
+      .prepare(
+        `WITH t(data) AS (SELECT jsonb('{ "foo": [1, 2, 3] }'))
+       SELECT json(data) FROM t
+       WHERE ${sql}`,
+      )
+      .all(...params);
+
+    expect(result).toMatchInlineSnapshot(`
+      [
+        {
+          "json(data)": "{"foo":[1,2,3]}",
+        },
+      ]
+    `);
+  });
+
+  it("gets the length of a string", () => {
+    const { sql, params } = compileExpr("_.foo.length >= 3");
+    expect(sql).toMatchInlineSnapshot(`
+      "(CASE json_type(jsonb(data -> '$.foo'))
+                  WHEN 'text'  THEN LENGTH(jsonb(data -> '$.foo') ->> '$')
+                  WHEN 'array' THEN json_array_length(jsonb(data -> '$.foo'))
+                  ELSE (jsonb(data -> '$.foo')->>'$.length')
+                END
+       >= ?)"
+    `);
+    const result = connection
+      .prepare(
+        `WITH t(data) AS (SELECT jsonb('{ "foo": "bar" }'))
+       SELECT json(data) FROM t
+       WHERE ${sql}`,
+      )
+      .all(...params);
+
+    expect(result).toMatchInlineSnapshot(`
+      [
+        {
+          "json(data)": "{"foo":"bar"}",
+        },
+      ]
+    `);
+  });
 });

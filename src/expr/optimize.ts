@@ -41,6 +41,9 @@ export function optimizeSqlExpr(node: SqlNode): SqlNode {
       return { type: "Like", value: [optimizeSqlExpr(a), optimizeSqlExpr(b)] };
     }
 
+    case "Length":
+      return { type: "Length", value: optimizeJsonExpr(node.value) };
+
     case "Includes": {
       const [a, b] = node.value;
       return {

@@ -185,4 +185,19 @@ router.delete("/:organisation/:collection/:id", (req, res, next) => {
   res.sendStatus(StatusCodes.NO_CONTENT);
 });
 
+router.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ): void => {
+    if (err.name === "PaatakaExpressionError") {
+      res.status(422).send({ error: err.message });
+      return;
+    }
+
+    next(err);
+  },
+);
 export default router;

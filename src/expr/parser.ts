@@ -127,6 +127,8 @@ function parseAccessor(tokens: Token[]): JsonNode {
       if (tokens[0]?.type === "OPEN_PAREN") {
         const args = parseArgs(tokens);
         lhs = Ast.methodCall(lhs, prop.value, args);
+      } else if (prop.value === "length") {
+        lhs = Ast.length(lhs);
       } else {
         lhs = Ast.dot(lhs, prop.value);
       }

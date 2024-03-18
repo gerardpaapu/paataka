@@ -716,6 +716,40 @@ describe("filtering with like(...)", () => {
     });
   });
 });
+
+describe("filtering by length", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler" });
+    db.addItemToCollection("pandas", "hats", { type: "sombrero" });
+  });
+
+  it("keeps matches", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: "_.type.length > 6",
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 2,
+          type: "sombrero",
+        },
+      ],
+    });
+  });
+});
+
 describe("filtering with includes", () => {
   let token: string;
   beforeEach(() => {

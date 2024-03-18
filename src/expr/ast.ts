@@ -15,6 +15,10 @@ export type SqlNode =
       value: [haystack: SqlNode, pattern: SqlNode];
     }
   | {
+      type: "Length";
+      value: JsonNode;
+    }
+  | {
       type: "Includes";
       value: [haystack: JsonNode, needle: SqlNode];
     }
@@ -80,6 +84,10 @@ export function toUpper(value: JsonNode): JsonNode {
 
 export function toLower(value: JsonNode): JsonNode {
   return sqlToJson({ type: "ToLower", value: jsonToSql(value) });
+}
+
+export function length(value: JsonNode): JsonNode {
+  return sqlToJson({ type: "Length", value });
 }
 
 export function methodCall(

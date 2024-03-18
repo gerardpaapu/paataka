@@ -86,6 +86,19 @@ export function compile(ast: SqlNode): Sql {
         };
       };
 
+    case "Length":
+      return ($) => {
+        const value = compileJsonValue(ast.value)($);
+        return {
+          sql: `CASE json_type(${value.sql})
+            WHEN 'text'  THEN LENGTH(${value.sql} ->> '$')
+            WHEN 'array' THEN json_array_length(${value.sql})
+            ELSE (${value.sql}->>'$.length')
+          END\n`,
+          params: [...value.params, ...value.params, ...value.params],
+        };
+      };
+
     case "Includes":
       return ($) => {
         const [a, b] = ast.value;
