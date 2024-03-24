@@ -235,6 +235,125 @@ describe("filtering objects in a collection with expressions", () => {
     db.addItemToCollection("pandas", "hats", { type: "sombrero", size: 7 });
   });
 
+  it("filters by id", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "id == 3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+      ],
+    });
+  });
+
+  it("filters to hats except size 3", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "_.size != 3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toStrictEqual({
+      count: 3,
+      items: [
+        {
+          id: 1,
+          size: 2,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          size: 1,
+          type: "top hat",
+        },
+        {
+          id: 4,
+          size: 7,
+          type: "sombrero",
+        },
+      ],
+    });
+  });
+
+  it("filters to hats size exactly 3", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "_.size == 3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+      ],
+    });
+  });
+  it("filters to hats size less than 3", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "_.size < 3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toStrictEqual({
+      count: 2,
+      items: [
+        {
+          id: 1,
+          size: 2,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          size: 1,
+          type: "top hat",
+        },
+      ],
+    });
+  });
+
+  it("filters to hats size 3 and down", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "_.size <= 3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toStrictEqual({
+      count: 3,
+      items: [
+        {
+          id: 1,
+          size: 2,
+          type: "bowler",
+        },
+        {
+          id: 2,
+          size: 1,
+          type: "top hat",
+        },
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+      ],
+    });
+  });
+
   it("filters to hats size 3 and up", async () => {
     const res = await request(server)
       .get("/api/_/pandas/hats")
@@ -242,23 +361,32 @@ describe("filtering objects in a collection with expressions", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchInlineSnapshot(`
-      {
-        "count": 2,
-        "items": [
-          {
-            "id": 3,
-            "size": 3,
-            "type": "cowboy",
-          },
-          {
-            "id": 4,
-            "size": 7,
-            "type": "sombrero",
-          },
-        ],
-      }
-    `);
+    expect(res.body).toStrictEqual({
+      count: 2,
+      items: [
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+        {
+          id: 4,
+          size: 7,
+          type: "sombrero",
+        },
+      ],
+    });
+  });
+
+  it("filters to hats with a negative number", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "_.size > -3" })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    // this is just all the hats
+    expect(res.body).toHaveProperty("count", 4);
   });
 
   it("filters to hats size 3 or bowlers", async () => {
@@ -268,23 +396,21 @@ describe("filtering objects in a collection with expressions", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchInlineSnapshot(`
-      {
-        "count": 2,
-        "items": [
-          {
-            "id": 1,
-            "size": 2,
-            "type": "bowler",
-          },
-          {
-            "id": 3,
-            "size": 3,
-            "type": "cowboy",
-          },
-        ],
-      }
-    `);
+    expect(res.body).toStrictEqual({
+      count: 2,
+      items: [
+        {
+          id: 1,
+          size: 2,
+          type: "bowler",
+        },
+        {
+          id: 3,
+          size: 3,
+          type: "cowboy",
+        },
+      ],
+    });
   });
 
   it("filters to hats size 3 or bowlers", async () => {
@@ -652,7 +778,45 @@ describe("deleting objects from a collection", () => {
   });
 });
 
-describe("filtering with .toLowerCase()", () => {
+describe("bracket access with string keys", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { "official color": "green" });
+    db.addItemToCollection("pandas", "hats", {
+      "official color": "yellow",
+    });
+    db.addItemToCollection("pandas", "hats", { "official color": "red" });
+  });
+
+  it("keeps matches", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: '_["official color"] == "yellow"',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(StatusCodes.OK);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "count": 1,
+        "items": [
+          {
+            "id": 2,
+            "official color": "yellow",
+          },
+        ],
+      }
+    `);
+  });
+});
+
+describe("filtering with case conversions", () => {
   let token: string;
   beforeEach(() => {
     db.createOrganisation("pandas");
@@ -683,9 +847,29 @@ describe("filtering with .toLowerCase()", () => {
       ],
     });
   });
+
+  it("converts a string to lowercase", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: '_.type.toUpperCase() == "BOWLER"',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "BoWlEr",
+        },
+      ],
+    });
+  });
 });
 
-describe("filtering with like(...)", () => {
+describe("filtering with like(...) and glob(...)", () => {
   let token: string;
   beforeEach(() => {
     db.createOrganisation("pandas");
@@ -695,6 +879,7 @@ describe("filtering with like(...)", () => {
     db.createCollection("pandas", "hats");
     db.addItemToCollection("pandas", "hats", { type: "bowler" });
     db.addItemToCollection("pandas", "hats", { type: "sombrero" });
+    db.addItemToCollection("pandas", "hats", { type: "BOWLER" });
   });
 
   it("keeps matches", async () => {
@@ -712,6 +897,26 @@ describe("filtering with like(...)", () => {
         {
           id: 2,
           type: "sombrero",
+        },
+      ],
+    });
+  });
+
+  it("glob is case-sensitive", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: 'glob(_.type, "b*r")',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
         },
       ],
     });
@@ -914,6 +1119,16 @@ describe("Invalid expressions", () => {
     const res = await request(server)
       .get("/api/_/pandas/hats")
       .query({ where: "like(a," })
+      .auth(token, { type: "bearer" });
+
+    expect(res.status).toBe(StatusCodes.UNPROCESSABLE_ENTITY);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("unknown identifiers are illegal", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats")
+      .query({ where: "foo > 2" })
       .auth(token, { type: "bearer" });
 
     expect(res.status).toBe(StatusCodes.UNPROCESSABLE_ENTITY);

@@ -61,9 +61,11 @@ function parseAtom(tokens: Token[]): JsonNode {
         switch (token.value) {
           case "like":
             return Ast.like(args[0], args[1]);
+          case "glob":
+            return Ast.glob(args[0], args[1]);
           default:
             throw new PaatakaExpressionError(
-              `Invalid function name: ${token.value}`,
+              `Invalid function name: ${token.value}:${args.length}`,
             );
         }
       }

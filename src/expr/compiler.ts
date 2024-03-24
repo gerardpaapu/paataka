@@ -6,10 +6,6 @@ type Sql = (root: string) => {
   params: unknown[];
 };
 
-function sql(sql: string, params: unknown[]): Sql {
-  return (_) => ({ sql, params });
-}
-
 function compileJsonValue(ast: JsonNode): Sql {
   switch (ast.type) {
     case "Id":
@@ -94,7 +90,18 @@ export function compile(ast: SqlNode): Sql {
           params: [..._a.params, ..._b.params],
         };
       };
+    case "Glob":
+      return ($) => {
+        const [a, b] = ast.value;
+        const _a = compile(a)($);
+        const _b = compile(b)($);
 
+        return {
+          // don't forget to swap the order of arguments
+          sql: `glob(${_b.sql}, ${_a.sql})`,
+          params: [..._a.params, ..._b.params],
+        };
+      };
     case "Length":
       return ($) => {
         const value = compileJsonValue(ast.value)($);

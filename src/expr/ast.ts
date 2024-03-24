@@ -31,6 +31,10 @@ export type SqlNode =
       type: "ToUpper";
       value: SqlNode;
     }
+  | {
+      type: "Glob";
+      value: [text: SqlNode, pattern: SqlNode];
+    }
   | { type: "Prefix"; operator: PrefixOp; value: SqlNode }
   | { type: "ToSql"; value: JsonNode }
   | { type: "BinOp"; operator: BinOp; value: [a: SqlNode, b: SqlNode] };
@@ -75,6 +79,10 @@ export function like(a: JsonNode, b: JsonNode): JsonNode {
   return sqlToJson({ type: "Like", value: [jsonToSql(a), jsonToSql(b)] });
 }
 
+export function glob(a: JsonNode, b: JsonNode): JsonNode {
+  return sqlToJson({ type: "Glob", value: [jsonToSql(a), jsonToSql(b)] });
+}
+
 export function includes(a: JsonNode, b: JsonNode): JsonNode {
   return sqlToJson({ type: "Includes", value: [a, jsonToSql(b)] });
 }
@@ -104,7 +112,7 @@ export function methodCall(
         );
       }
       return toLower(obj);
-    case "toUpper":
+    case "toUpperCase":
       if (args.length !== 0) {
         throw new PaatakaExpressionError(
           `Wrong number of arguments to toUpperCase`,

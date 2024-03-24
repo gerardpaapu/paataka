@@ -42,9 +42,13 @@ export function optimizeSqlExpr(node: SqlNode): SqlNode {
       return node;
     case "LiteralNumber":
       return node;
-    case "Like": {
+    case "Like":
+    case "Glob": {
       const [a, b] = node.value;
-      return { type: "Like", value: [optimizeSqlExpr(a), optimizeSqlExpr(b)] };
+      return {
+        type: node.type,
+        value: [optimizeSqlExpr(a), optimizeSqlExpr(b)],
+      };
     }
 
     case "Length":
