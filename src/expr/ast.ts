@@ -5,7 +5,8 @@ export type JsonNode =
   | { type: "Id"; value: string }
   | { type: "Dot"; value: [node: JsonNode, ...properties: string[]] }
   | { type: "Bracket"; value: [node: JsonNode, property: SqlNode] }
-  | { type: "ToJson"; value: SqlNode };
+  | { type: "ToJson"; value: SqlNode }
+  | { type: "ArrayLiteral"; values: JsonNode[] };
 
 export type SqlNode =
   | { type: "LiteralString"; value: string }

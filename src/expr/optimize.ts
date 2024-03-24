@@ -19,6 +19,12 @@ export function optimizeJsonExpr(node: JsonNode): JsonNode {
         value: [optimizeJsonExpr(a), optimizeSqlExpr(b)],
       };
     }
+
+    case "ArrayLiteral": {
+      const values = node.values.map(optimizeJsonExpr);
+      return { type: "ArrayLiteral", values };
+    }
+
     case "ToJson": {
       const value = optimizeSqlExpr(node.value);
       if (value.type === "ToSql") {

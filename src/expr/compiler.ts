@@ -54,6 +54,15 @@ function compileJsonValue(ast: JsonNode): Sql {
           params: val.params,
         };
       };
+
+    case "ArrayLiteral":
+      return ($) => {
+        const values = ast.values.map((v) => compileJsonValue(v)($));
+        return {
+          sql: `jsonb_array(${values.map((_) => _.sql).join(", ")})`,
+          params: values.flatMap((_) => _.params),
+        };
+      };
   }
 }
 

@@ -46,6 +46,11 @@ function parseAtom(tokens: Token[]): JsonNode {
       return expr;
     }
 
+    case "OPEN_BRACKET": {
+      const values = parseArray(tokens);
+      return { type: "ArrayLiteral", values };
+    }
+
     case "IDENTIFIER":
       if (!token.value) {
         throw new PaatakaExpressionError();
@@ -74,6 +79,33 @@ function parseAtom(tokens: Token[]): JsonNode {
     default:
       throw new PaatakaExpressionError(`Unexpected ${token.type}`);
   }
+}
+
+function parseArray(tokens: Token[]): JsonNode[] {
+  let items = [] as JsonNode[];
+  if (!tokens.length) {
+    throw new PaatakaExpressionError("Unexpected EOF in array literal");
+  }
+
+  let next = tokens[0];
+  if (next && next.type === "CLOSE_BRACKET") {
+    tokens.shift();
+  } else {
+    items.push(parseExpr(tokens));
+
+    while (tokens[0].type === "COMMA") {
+      tokens.shift();
+      items.push(parseExpr(tokens));
+    }
+
+    let close = tokens.shift();
+    if (close?.type !== "CLOSE_BRACKET") {
+      throw new PaatakaExpressionError(
+        "Expected closing bracket for array literal",
+      );
+    }
+  }
+  return items;
 }
 
 function parseArgs(tokens: Token[]): JsonNode[] {
@@ -150,6 +182,10 @@ function parseAccessor(tokens: Token[]): JsonNode {
 //          := '-' negated
 //          := accessor
 function parseNegated(tokens: Token[]): JsonNode {
+  if (!tokens.length) {
+    throw new PaatakaExpressionError(`Unexpected EOF reading expression`);
+  }
+
   let token = tokens[0];
   let type = token.type;
 

@@ -9,7 +9,6 @@ import PaatakaExpressionError from "./PaatakaExpressionError.ts";
 export function compileExpr(expr: string) {
   try {
     const src = source(expr);
-    11;
     const tokens = tokenize(src);
     const ast1 = parse(tokens);
     const ast2 = optimizeSqlExpr(jsonToSql(ast1));

@@ -802,27 +802,60 @@ describe("filtering with includes", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toMatchInlineSnapshot(`
-      {
-        "count": 1,
-        "items": [
-          {
-            "id": 2,
-            "sizes": [
-              4,
-              5,
-              6,
-            ],
-            "tags": [
-              "huge",
-              "mexican",
-              "fiesta",
-            ],
-            "type": "sombrero",
-          },
-        ],
-      }
-    `);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 2,
+          sizes: [4, 5, 6],
+          tags: ["huge", "mexican", "fiesta"],
+          type: "sombrero",
+        },
+      ],
+    });
+  });
+});
+
+describe("array literals", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", {
+      type: "bowler",
+      tags: ["old-school", "stylish", "little"],
+      sizes: [1, 2, 3],
+    });
+    db.addItemToCollection("pandas", "hats", {
+      type: "sombrero",
+      tags: ["huge", "mexican", "fiesta"],
+      sizes: [4, 5, 6],
+    });
+  });
+
+  it("can use includes on array literals", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: '["sombrero", "topaz"].includes(_.type)',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 2,
+          sizes: [4, 5, 6],
+          tags: ["huge", "mexican", "fiesta"],
+          type: "sombrero",
+        },
+      ],
+    });
   });
 });
 
