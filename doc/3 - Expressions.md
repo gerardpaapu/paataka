@@ -45,6 +45,10 @@ _.urls["x"] == "https://x.com/kevin";
 _["urls"].x == "https://x.com/kevin";
 ```
 
+The `.length` property works more or as you might expect for strings and arrays. The length of a string with non-ascii characters will be different because of the difference between sqlite representation and how string.length works for JavaScript strings.
+
+Accessing items in arrays by number does _not_ yet work.
+
 ## Comparisons
 
 The following comparisons are available
@@ -64,23 +68,24 @@ _.genre != "Country"; // is this song acceptable?
 
 ## Logical combination
 
-logical "and" and "or" are written the same as in JavaScript
+logical "and", "or" and "not" are written the same as in JavaScript
 
 ```
-&& ||
+&& || !
 ```
 
-This allows us to ask two questions or more questions in the same expression:
+This allows us to ask two or more questions in the same expression:
 
 ```js
 _.height < 1.5 && _.weightKg < 50; // could I carry this person?
+!(_.height >= 1.5 || _.weightKg >= 50) // could I carry Augustus De Morgan?
 ```
 
 ## Using expressions in URLs
 
-Expressions are used in the query string (
-Our expression language is designed without concern
-for what it looks like in a URL, and therefore "how it looks" is "ugly".
+Expressions are used in the query string of a URL.
+
+Despite that our expression language is designed without concern for what it looks like in a URL, and therefore "how it looks" is "ugly".
 
 For example, behold!
 
@@ -138,11 +143,18 @@ We implement two methods on strings `.toUpperCase()` and `.toLowerCase()`, these
 
 We implement `array.includes()` to check for specific values inside arrays
 
-Of course, these are not real method-calls, `_.toUpperCase()` is compiled to the SQL function `UPPER(_)` and `_.toLowerCase()` is compiled to `LOWER(_)`
+Array literals are available, mostly so you can use `.includes()` to
+check against multiple values.
+
+```js
+["country", "western"].includes(_.genre)
+```
+
+Of course, these are not real method-calls, `_.toUpperCase()` is compiled to the SQL function `UPPER(_)` and `_.toLowerCase()` is compiled to `LOWER(_)`, `_.includes()` is compiled to an `EXISTS` sub-query.
 
 The syntax is purely to give the queries a more JavaScript-ish feel.
 
-We implement one function `like(str, pattern)` which compiles directly to the SQL function `LIKE(pattern, str)` which has the same semantics as the SQL builtin `str LIKE pattern`.
+`like(str, pattern)` which compiles directly to the SQL function `LIKE(pattern, str)` which has the same semantics as the SQL builtin `str LIKE pattern`.
 
 ## Weird stuff
 

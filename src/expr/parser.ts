@@ -32,6 +32,7 @@ import * as Ast from "./ast.ts";
 //      := '(' expr  ')'
 function parseAtom(tokens: Token[]): JsonNode {
   let token = tokens.shift();
+  /* v8 ignore next 3 */
   if (!token) {
     throw new PaatakaExpressionError("Out of tokens");
   }
@@ -41,7 +42,7 @@ function parseAtom(tokens: Token[]): JsonNode {
       let expr = parseExpr(tokens);
       let close = tokens.shift();
       if (close == undefined || close.type !== "CLOSE_PAREN") {
-        throw new PaatakaExpressionError();
+        throw new PaatakaExpressionError("Unclosed parenthetical");
       }
       return expr;
     }
@@ -51,13 +52,9 @@ function parseAtom(tokens: Token[]): JsonNode {
       return { type: "ArrayLiteral", values };
     }
 
-    case "IDENTIFIER":
-      if (!token.value) {
-        throw new PaatakaExpressionError();
-      }
-
-      if (tokens[0]?.type === "OPEN_PAREN") {
-        const args = parseArgs(tokens);
+    case "IDENTIFIER": {
+      const args = parseArgs(tokens);
+      if (args != undefined) {
         switch (token.value) {
           case "like":
             return Ast.like(args[0], args[1]);
@@ -69,9 +66,8 @@ function parseAtom(tokens: Token[]): JsonNode {
             );
         }
       }
-
-      return Ast.id(token.value);
-
+      return Ast.id(token.value!);
+    }
     case "STRING_LITERAL":
       return Ast.str(token.value!);
 
@@ -80,6 +76,7 @@ function parseAtom(tokens: Token[]): JsonNode {
 
     default:
       throw new PaatakaExpressionError(`Unexpected ${token.type}`);
+    /* v8 ignore next 2 */
   }
 }
 
@@ -95,7 +92,7 @@ function parseArray(tokens: Token[]): JsonNode[] {
   } else {
     items.push(parseExpr(tokens));
 
-    while (tokens[0].type === "COMMA") {
+    while (tokens.length && tokens[0].type === "COMMA") {
       tokens.shift();
       items.push(parseExpr(tokens));
     }
@@ -110,11 +107,12 @@ function parseArray(tokens: Token[]): JsonNode[] {
   return items;
 }
 
-function parseArgs(tokens: Token[]): JsonNode[] {
+function parseArgs(tokens: Token[]): JsonNode[] | undefined {
   let args = [] as JsonNode[];
-  if (tokens.shift()?.type !== "OPEN_PAREN") {
-    throw new PaatakaExpressionError("Arguments should start with a Paren");
+  if (tokens.length === 0 || tokens[0].type !== "OPEN_PAREN") {
+    return undefined;
   }
+  tokens.shift();
 
   if (!tokens.length) {
     throw new PaatakaExpressionError("Unexpected EOF in argument list");
@@ -125,7 +123,8 @@ function parseArgs(tokens: Token[]): JsonNode[] {
     tokens.shift();
   } else {
     args.push(parseExpr(tokens));
-    while (tokens[0].type === "COMMA") {
+    /* @ts-expect-error I think this is a bug in tsc */
+    while (tokens.length && tokens[0].type === "COMMA") {
       tokens.shift();
       args.push(parseExpr(tokens));
     }
@@ -157,9 +156,8 @@ function parseAccessor(tokens: Token[]): JsonNode {
       if (!prop || prop.type !== "IDENTIFIER" || !prop.value) {
         throw new PaatakaExpressionError('Missing identifier after "."');
       }
-
-      if (tokens[0]?.type === "OPEN_PAREN") {
-        const args = parseArgs(tokens);
+      const args = parseArgs(tokens);
+      if (args !== undefined) {
         lhs = Ast.methodCall(lhs, prop.value, args);
       } else if (prop.value === "length") {
         lhs = Ast.length(lhs);
@@ -276,8 +274,3 @@ export function parse(tokens: Token[]): JsonNode {
 
   return expr;
 }
-/*
-console.log(
-  JSON.stringify(parse('_.foo.bar["baz"] >= _.fizz.buzz[69] >= 2'), null, 2),
-);
-*/

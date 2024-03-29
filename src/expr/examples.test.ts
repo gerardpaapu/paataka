@@ -175,6 +175,11 @@ describe("filtering data", () => {
     `);
   });
 
+  it("uses the result of toUpper to access a property", () => {
+    const { sql, params } = compileExpr('_.foo["k".toUpperCase()]');
+    expect(sql).toMatchInlineSnapshot(`"((jsonb(data -> '$.foo')->UPPER(?))->>'$')"`);
+  });
+
   it("gets the length of a string", () => {
     const { sql, params } = compileExpr("_.foo.length >= 3");
     expect(sql).toMatchInlineSnapshot(`

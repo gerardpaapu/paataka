@@ -15,6 +15,11 @@ export function compileExpr(expr: string) {
     const { sql, params } = compile(ast2)("data");
     return { sql, params };
   } catch (err: any) {
-    throw new PaatakaExpressionError("Unexpected error processing expression");
+    if (err?.name !== "PaatakaExpressionError") {
+      throw new PaatakaExpressionError(
+        "Unexpected error processing expression",
+      );
+    }
+    throw err;
   }
 }

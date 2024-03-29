@@ -112,6 +112,7 @@ export function methodCall(
         );
       }
       return toLower(obj);
+
     case "toUpperCase":
       if (args.length !== 0) {
         throw new PaatakaExpressionError(

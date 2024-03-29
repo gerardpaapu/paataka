@@ -1132,6 +1132,8 @@ describe("Invalid expressions", () => {
       .auth(token, { type: "bearer" });
 
     expect(res.status).toBe(StatusCodes.UNPROCESSABLE_ENTITY);
-    expect(res.body).toHaveProperty("error");
+    expect(res.body).toStrictEqual({
+      error: "Invalid identifier foo",
+    });
   });
 });
