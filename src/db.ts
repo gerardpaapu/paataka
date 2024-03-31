@@ -7,14 +7,14 @@ export function reset() {
 }
 
 const GET_ORG_QUERY = connection.prepare(
-  "SELECT * FROM organisations WHERE id = ?",
+  "SELECT * FROM organisations WHERE id = ? LIMIT 1",
 );
 export function getOrganisation(id: number | bigint) {
   return GET_ORG_QUERY.get(id) as OrganisationWithSecrets;
 }
 
 const GET_ORG_BY_NAME_QUERY = connection.prepare(
-  "SELECT * FROM organisations WHERE name = ?",
+  "SELECT * FROM organisations WHERE name = ? LIMIT 1",
 );
 export function getOrganisationByName(name: string) {
   return GET_ORG_BY_NAME_QUERY.get(name) as OrganisationWithSecrets;
@@ -64,52 +64,42 @@ export function deleteOrganisation(name: string) {
 }
 
 const GET_COLLECTIONS_QUERY = connection.prepare(
-  "SELECT * FROM collections WHERE organisation_name = ?",
+  "SELECT id, organisation_name, name FROM collections WHERE organisation_name = ?",
 );
 export function getCollections(organisation: string) {
   return GET_COLLECTIONS_QUERY.all(organisation) as Collection[];
 }
 
-export function createCollection(organisation: string, name: string) {
-  const res = connection
-    .prepare("INSERT INTO collections (organisation_name, name) VALUES (?, ?)")
-    .run(organisation, name);
+const CREATE_COLLECTION_QUERY = connection.prepare(
+  "INSERT INTO collections (organisation_name, name) VALUES (?, ?)",
+);
 
+export function createCollection(organisation: string, name: string) {
+  const res = CREATE_COLLECTION_QUERY.run(organisation, name);
   return res.lastInsertRowid;
 }
+
+const ADD_ITEM_QUERY = connection.prepare(
+  `INSERT INTO records (id, collection_id, data)
+   SELECT (last_id + 1), id, jsonb(?)
+   FROM  collections
+   WHERE collections.name = ?
+   AND   collections.organisation_name = ?
+   RETURNING id, collection_id`,
+);
 
 export function addItemToCollection(
   organisation: string,
   collection: string,
   value: Record<string, any>,
 ) {
-  const res = connection
-    .prepare(
-      `
-      INSERT INTO records (id, collection_id, data) 
-      VALUES (1 + IFNULL(
-                    (SELECT MAX(r.id)
-                     FROM records AS r
-                     JOIN collections ON r.collection_id = collections.id 
-                     WHERE collections.name = ?
-                     AND   collections.organisation_name = ?) 
-                  , 0)
-              , (SELECT id
-                  FROM collections
-                  WHERE name = ? and organisation_name = ?)
-              , jsonb(?)
-              )
-      RETURNING id, collection_id      `,
-    )
-    .get(
-      collection,
-      organisation,
-      collection,
-      organisation,
-      JSON.stringify(value),
-    );
+  const res = ADD_ITEM_QUERY.get(
+    JSON.stringify(value),
+    collection,
+    organisation,
+  );
 
-  if ((res as any).collection_id == null) {
+  if (res == undefined || (res as any).collection_id == null) {
     return undefined;
   }
   return (res as any).id as number;
@@ -128,6 +118,31 @@ interface PagingInfo {
   pageCount: number;
   itemsPerPage: number;
 }
+
+const GET_ITEMS_QUERY_PAGED = connection.prepare(`
+SELECT records.id as id,
+       records.data,
+       json(data) as json,
+       collections.count as count
+FROM collections
+JOIN records
+  ON records.collection_id = collections.id
+ AND collections.organisation_name = ?
+ AND collections.name = ?
+ LIMIT ? OFFSET ?
+`);
+
+const GET_ITEMS_QUERY = connection.prepare(`
+SELECT records.id as id,
+       records.data,
+       json(data) as json,
+       collections.count as count
+FROM collections
+JOIN records
+  ON records.collection_id = collections.id
+ AND collections.organisation_name = ?
+ AND collections.name = ?
+`);
 
 export function getItems(org: string, collection: string, features?: Features) {
   let WHERE = { sql: "", params: [] as unknown[] };
@@ -167,9 +182,11 @@ export function getItems(org: string, collection: string, features?: Features) {
     };
   }
 
-  const rows = connection
-    .prepare(
-      `
+  let rows: unknown[];
+  if (features?.where || features?.orderBy) {
+    rows = connection
+      .prepare(
+        `
     WITH results AS (
          SELECT records.id as id
                , records.data
@@ -185,15 +202,19 @@ export function getItems(org: string, collection: string, features?: Features) {
     ${ORDER_BY.sql}
     ${PAGING.sql}
   `,
-    )
-    .all(
-      org,
-      collection,
-      ...WHERE.params,
-      ...ORDER_BY.params,
-      ...PAGING.params,
-    ) as any[];
-
+      )
+      .all(
+        org,
+        collection,
+        ...WHERE.params,
+        ...ORDER_BY.params,
+        ...PAGING.params,
+      ) as any[];
+  } else if (features?.page) {
+    rows = GET_ITEMS_QUERY_PAGED.all(org, collection, ...PAGING.params);
+  } else {
+    rows = GET_ITEMS_QUERY.all(org, collection);
+  }
   if (rows.length > 0) {
     const { count } = rows[0];
     const items = rows.map((row) => {
@@ -234,6 +255,7 @@ export function getById(org: string, collection: string, id: number) {
       WHERE records.id = ?
       AND collections.organisation_name = ?
       AND collections.name = ?
+      LIMIT 1
 `,
     )
     .get(id, org, collection);
@@ -346,11 +368,10 @@ export function getCollectionSummary(organisation: string) {
   const rows = connection
     .prepare(
       `
-    SELECT name, COUNT(records.id) as count
+    SELECT name, count
     FROM collections
-    LEFT OUTER JOIN records ON records.collection_id = collections.id
     WHERE collections.organisation_name = ?
-    GROUP BY collections.id
+    ORDER BY collections.id
   `,
     )
     .all(organisation);

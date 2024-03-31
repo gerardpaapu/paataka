@@ -27,7 +27,7 @@ router.get("/:organisation", (req, res, next) => {
   }
 });
 
-router.post("/:organisation", (req, res, next) => {
+router.post("/:organisation", (req, res) => {
   const codeString = req.query.code;
   if (!codeString || typeof codeString !== "string") {
     res

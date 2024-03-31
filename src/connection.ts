@@ -9,7 +9,10 @@ function init() {
       : Path.resolve("storage/db.sqlite3");
   const db = new Database(path, options);
   db.pragma("journal_mode = WAL");
+  db.pragma("synchronous = NORMAL");
   db.pragma("foreign_keys = ON");
+  db.pragma("busy_timeout = 5000");
+
   db.exec(`
   CREATE TABLE IF NOT EXISTS organisations 
     ( id   INTEGER PRIMARY KEY
@@ -22,6 +25,8 @@ function init() {
     ( id                INTEGER PRIMARY KEY
     , organisation_name TEXT REFERENCES organisations(name) ON DELETE CASCADE
     , name              TEXT
+    , last_id           INTEGER DEFAULT 0
+    , count             INTEGER DEFAULT 0
     ) STRICT;
 
   CREATE UNIQUE INDEX IF NOT EXISTS unique_collection_group on collections(organisation_name, name);
@@ -33,6 +38,21 @@ function init() {
     ) STRICT;
   
   CREATE UNIQUE INDEX IF NOT EXISTS unique_record_group_id ON records(id, collection_id);
+
+  CREATE TRIGGER IF NOT EXISTS record_insert_trigger
+  AFTER INSERT ON records
+  BEGIN
+     UPDATE collections SET count = count + 1
+                          , last_id = last_id + 1
+     WHERE collections.id = NEW.collection_id;
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS record_delete_trigger
+  AFTER DELETE ON records
+  BEGIN
+     UPDATE collections SET count = count - 1
+     WHERE collections.id = OLD.collection_id;
+  END;
   `);
   return db;
 }
