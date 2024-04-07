@@ -33,6 +33,9 @@ export function optimizeJsonExpr(node: JsonNode): JsonNode {
 
       return { type: "ToJson", value };
     }
+
+    case "ArrowFunction":
+      throw new Error("poops");
   }
 }
 
@@ -59,6 +62,21 @@ export function optimizeSqlExpr(node: SqlNode): SqlNode {
       return {
         type: "Includes",
         value: [optimizeJsonExpr(a), optimizeSqlExpr(b)],
+      };
+    }
+
+    case "some": {
+      const [a, fn] = node.value;
+      const [param, expr] = fn.value;
+      return {
+        type: "some",
+        value: [
+          optimizeJsonExpr(a),
+          {
+            type: "ArrowFunction",
+            value: [param, optimizeSqlExpr(expr)],
+          },
+        ],
       };
     }
 

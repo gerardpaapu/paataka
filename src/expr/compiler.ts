@@ -6,10 +6,19 @@ type Sql = (root: string) => {
   params: unknown[];
 };
 
-function compileJsonValue(ast: JsonNode): Sql {
+interface Env {
+  vars: Record<string, Sql>;
+  count: number;
+}
+
+function compileJsonValue(ast: JsonNode, env: Env): Sql {
   switch (ast.type) {
     case "Id":
       return ($) => {
+        if (ast.value in env.vars) {
+          return env.vars[ast.value]($);
+        }
+
         switch (ast.value) {
           case "_":
             return { sql: $, params: [] };
@@ -23,7 +32,7 @@ function compileJsonValue(ast: JsonNode): Sql {
     case "Dot":
       return ($) => {
         const [a, ...b] = ast.value;
-        const _a = compileJsonValue(a)($);
+        const _a = compileJsonValue(a, env)($);
         const _b = b.map((prop) => `.${prop}`).join("");
         return {
           sql: `jsonb(${_a.sql} -> '$${_b}')`,
@@ -34,8 +43,8 @@ function compileJsonValue(ast: JsonNode): Sql {
     case "Bracket":
       return ($) => {
         const [a, b] = ast.value;
-        const _a = compileJsonValue(a)($);
-        const _b = compile(b)($);
+        const _a = compileJsonValue(a, env)($);
+        const _b = compile(b, env)($);
         return {
           sql: `(${_a.sql}->${_b.sql})`,
           params: [..._a.params, ..._b.params],
@@ -44,7 +53,7 @@ function compileJsonValue(ast: JsonNode): Sql {
 
     case "ToJson":
       return ($) => {
-        const val = compile(ast.value)($);
+        const val = compile(ast.value, env)($);
         return {
           sql: `jsonb(json_quote(${val.sql}))`,
           params: val.params,
@@ -53,16 +62,19 @@ function compileJsonValue(ast: JsonNode): Sql {
 
     case "ArrayLiteral":
       return ($) => {
-        const values = ast.values.map((v) => compileJsonValue(v)($));
+        const values = ast.values.map((v) => compileJsonValue(v, env)($));
         return {
           sql: `jsonb_array(${values.map((_) => _.sql).join(", ")})`,
           params: values.flatMap((_) => _.params),
         };
       };
+
+    case "ArrowFunction":
+      throw new Error(`Can't compile naked arrow function`);
   }
 }
 
-export function compile(ast: SqlNode): Sql {
+export function compile(ast: SqlNode, env: Env): Sql {
   switch (ast.type) {
     case "LiteralString":
       return ($) => {
@@ -82,8 +94,8 @@ export function compile(ast: SqlNode): Sql {
     case "Like":
       return ($) => {
         const [a, b] = ast.value;
-        const _a = compile(a)($);
-        const _b = compile(b)($);
+        const _a = compile(a, env)($);
+        const _b = compile(b, env)($);
         return {
           // don't forget to swap the order of arguments
           sql: `like(${_b.sql}, ${_a.sql})`,
@@ -93,8 +105,8 @@ export function compile(ast: SqlNode): Sql {
     case "Glob":
       return ($) => {
         const [a, b] = ast.value;
-        const _a = compile(a)($);
-        const _b = compile(b)($);
+        const _a = compile(a, env)($);
+        const _b = compile(b, env)($);
 
         return {
           // don't forget to swap the order of arguments
@@ -104,7 +116,7 @@ export function compile(ast: SqlNode): Sql {
       };
     case "Length":
       return ($) => {
-        const value = compileJsonValue(ast.value)($);
+        const value = compileJsonValue(ast.value, env)($);
         return {
           sql: `CASE json_type(${value.sql})
             WHEN 'text'  THEN LENGTH(${value.sql} ->> '$')
@@ -118,8 +130,8 @@ export function compile(ast: SqlNode): Sql {
     case "Includes":
       return ($) => {
         const [a, b] = ast.value;
-        const _a = compileJsonValue(a)($);
-        const _b = compile(b)($);
+        const _a = compileJsonValue(a, env)($);
+        const _b = compile(b, env)($);
 
         return {
           sql: `(EXISTS (SELECT item.value as j
@@ -129,9 +141,36 @@ export function compile(ast: SqlNode): Sql {
         };
       };
 
+    case "some":
+      return ($) => {
+        const [needle, fn] = ast.value;
+        if (fn.type !== "ArrowFunction") {
+          throw new Error("some takes a function literal");
+        }
+
+        const [parameter, expr] = fn.value;
+        const name = `json_${env.count + 1}`;
+        const env_ = {
+          count: env.count + 1,
+          vars: {
+            ...env.vars,
+            [parameter]: () => ({ sql: name, params: [] }),
+          },
+        };
+        const _a = compileJsonValue(needle, env)($);
+        const _b = compile(expr, env_)($);
+
+        return {
+          sql: `(EXISTS (SELECT jsonb(json_quote(item.value)) as ${name}
+                         FROM json_each(${_a.sql}) as item
+                         WHERE ${_b.sql}))`,
+          params: [..._a.params, ..._b.params],
+        };
+      };
+
     case "ToLower":
       return ($) => {
-        const val = compile(ast.value)($);
+        const val = compile(ast.value, env)($);
         return {
           sql: `LOWER(${val.sql})`,
           params: [...val.params],
@@ -140,7 +179,7 @@ export function compile(ast: SqlNode): Sql {
 
     case "ToUpper":
       return ($) => {
-        const val = compile(ast.value)($);
+        const val = compile(ast.value, env)($);
         return {
           sql: `UPPER(${val.sql})`,
           params: [...val.params],
@@ -149,7 +188,7 @@ export function compile(ast: SqlNode): Sql {
 
     case "Prefix":
       return ($) => {
-        const val = compile(ast.value)($);
+        const val = compile(ast.value, env)($);
         let sql =
           ast.operator === "OP_MINUS" ? `(- ${val.sql})` : `(NOT ${val.sql})`;
         return { sql, params: val.params };
@@ -157,7 +196,7 @@ export function compile(ast: SqlNode): Sql {
 
     case "ToSql":
       return ($) => {
-        const val = compileJsonValue(ast.value)($);
+        const val = compileJsonValue(ast.value, env)($);
         return {
           sql: `(${val.sql}->>'$')`,
           params: val.params,
@@ -167,8 +206,8 @@ export function compile(ast: SqlNode): Sql {
     case "BinOp":
       return ($) => {
         const [a, b] = ast.value;
-        const _a = compile(a)($);
-        const _b = compile(b)($);
+        const _a = compile(a, env)($);
+        const _b = compile(b, env)($);
         const params = [..._a.params, ..._b.params];
 
         switch (ast.operator) {

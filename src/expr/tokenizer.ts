@@ -18,6 +18,7 @@ export type TokenType =
   | PrefixOp
   | "DOT"
   | "COMMA"
+  | "ARROW"
   | "OPEN_BRACKET"
   | "CLOSE_BRACKET"
   | "STRING_LITERAL"
@@ -134,6 +135,12 @@ export function tokenize(src: Source): Token[] {
 
       case "=":
         pop(src);
+        if (peek(src) === ">") {
+          pop(src);
+          tokens.push({ type: "ARROW" });
+          break;
+        }
+
         if (pop(src) !== "=") {
           throw new PaatakaExpressionError('Invalid token "="');
         }

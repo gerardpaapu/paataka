@@ -956,6 +956,50 @@ describe("filtering by length", () => {
   });
 });
 
+describe("filtering with some", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", {
+      type: "bowler",
+      tags: ["old-school", "stylish", "little"],
+      sizes: [1, 2, 3],
+    });
+    db.addItemToCollection("pandas", "hats", {
+      type: "sombrero",
+      tags: ["huge", "mexican", "fiesta"],
+      sizes: [4, 5, 6],
+    });
+  });
+
+  // TODO: write "every"
+  it("matches tags", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: '_.tags.some(tag => tag.toUpperCase() == "OLD-SCHOOL")',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
+          tags: ["old-school", "stylish", "little"],
+          sizes: [1, 2, 3],
+        },
+      ],
+    });
+  });
+});
+
 describe("filtering with includes", () => {
   let token: string;
   beforeEach(() => {

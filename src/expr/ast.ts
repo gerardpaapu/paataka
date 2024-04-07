@@ -1,12 +1,24 @@
 import { type BinOp, type PrefixOp } from "./tokenizer.ts";
 import PaatakaExpressionError from "./PaatakaExpressionError.ts";
 
+export type ArrowFunctionNode = {
+  type: "ArrowFunction";
+  value: [parameter: string, body: SqlNode];
+};
+
+export function isArrowFunction(ast: JsonNode): ast is ArrowFunctionNode {
+  return ast.type === "ArrowFunction";
+}
+
 export type JsonNode =
   | { type: "Id"; value: string }
   | { type: "Dot"; value: [node: JsonNode, ...properties: string[]] }
   | { type: "Bracket"; value: [node: JsonNode, property: SqlNode] }
   | { type: "ToJson"; value: SqlNode }
-  | { type: "ArrayLiteral"; values: JsonNode[] };
+  | { type: "ArrayLiteral"; values: JsonNode[] }
+  // This is a `JsonNode` as convenience only, it of course cannot
+  // be compiled as a JSON value
+  | ArrowFunctionNode;
 
 export type SqlNode =
   | { type: "LiteralString"; value: string }
@@ -22,6 +34,10 @@ export type SqlNode =
   | {
       type: "Includes";
       value: [haystack: JsonNode, needle: SqlNode];
+    }
+  | {
+      type: "some";
+      value: [haystack: JsonNode, fn: ArrowFunctionNode];
     }
   | {
       type: "ToLower";
@@ -113,6 +129,16 @@ export function methodCall(
       }
       return toLower(obj);
 
+    case "some": {
+      const fn = args[0];
+      if (fn == undefined || !isArrowFunction(fn)) {
+        throw new PaatakaExpressionError(
+          `Wrong number of arguments to .some()`,
+        );
+      }
+
+      return some(obj, fn);
+    }
     case "toUpperCase":
       if (args.length !== 0) {
         throw new PaatakaExpressionError(
@@ -148,4 +174,12 @@ export function negative(value: JsonNode): JsonNode {
     operator: "OP_MINUS",
     value: jsonToSql(value),
   });
+}
+
+export function some(obj: JsonNode, fn: ArrowFunctionNode): JsonNode {
+  return sqlToJson({ type: "some", value: [obj, fn] });
+}
+
+export function arrowFn(param: string, body: JsonNode): JsonNode {
+  return { type: "ArrowFunction", value: [param, jsonToSql(body)] };
 }

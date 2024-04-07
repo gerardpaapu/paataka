@@ -149,7 +149,7 @@ export function getItems(org: string, collection: string, features?: Features) {
   if (features?.where) {
     const { sql, params } = compileExpr(features.where);
     WHERE = {
-      sql: `WHERE (records.id IS NULL OR (${sql}->>'$'))\n`,
+      sql: `WHERE (${sql})\n`,
       params,
     };
   }
@@ -159,7 +159,7 @@ export function getItems(org: string, collection: string, features?: Features) {
     const { sql, params } = compileExpr(features.orderBy);
     const dir = features?.dir?.toLocaleLowerCase() === "desc" ? "DESC" : "ASC";
     ORDER_BY = {
-      sql: `ORDER BY (${sql}->>'$') ${dir}\n`,
+      sql: `ORDER BY (${sql}) ${dir}\n`,
       params,
     };
   }
@@ -182,7 +182,7 @@ export function getItems(org: string, collection: string, features?: Features) {
     };
   }
 
-  let rows: unknown[];
+  let rows: any[];
   if (features?.where || features?.orderBy) {
     rows = connection
       .prepare(
@@ -193,7 +193,7 @@ export function getItems(org: string, collection: string, features?: Features) {
                , json(data) as json
           FROM collections
           JOIN records
-            ON  records.collection_id = collections.id
+            ON records.collection_id = collections.id
             AND collections.organisation_name = ?
             AND collections.name = ?
           ${WHERE.sql}          

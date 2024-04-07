@@ -53,6 +53,11 @@ function parseAtom(tokens: Token[]): JsonNode {
     }
 
     case "IDENTIFIER": {
+      const fn = parseArrowFn(token.value!, tokens);
+      if (fn != undefined) {
+        return fn;
+      }
+
       const args = parseArgs(tokens);
       if (args != undefined) {
         switch (token.value) {
@@ -105,6 +110,24 @@ function parseArray(tokens: Token[]): JsonNode[] {
     }
   }
   return items;
+}
+
+function parseArrowFn(
+  identifier: string,
+  tokens: Token[],
+): JsonNode | undefined {
+  if (tokens.length < 2) {
+    return undefined;
+  }
+  const arrow = tokens[0];
+  if (arrow.type !== "ARROW") {
+    return undefined;
+  }
+
+  tokens.shift();
+
+  let expr = parseExpr(tokens);
+  return Ast.arrowFn(identifier, expr);
 }
 
 function parseArgs(tokens: Token[]): JsonNode[] | undefined {

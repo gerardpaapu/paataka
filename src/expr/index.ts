@@ -12,7 +12,8 @@ export function compileExpr(expr: string) {
     const tokens = tokenize(src);
     const ast1 = parse(tokens);
     const ast2 = optimizeSqlExpr(jsonToSql(ast1));
-    const { sql, params } = compile(ast2)("data");
+    const env = { vars: Object.create(null), count: 0 };
+    const { sql, params } = compile(ast2, env)("data");
     return { sql, params };
   } catch (err: any) {
     if (err?.name !== "PaatakaExpressionError") {
