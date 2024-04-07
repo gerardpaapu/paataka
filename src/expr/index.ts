@@ -1,6 +1,6 @@
 import { parse } from "./parser.ts";
 import { tokenize } from "./tokenizer.ts";
-import { compile } from "./compiler.ts";
+import { compileSqlNode } from "./compiler.ts";
 import { source } from "./source.ts";
 import { jsonToSql } from "./ast.ts";
 import { optimizeSqlExpr } from "./optimize.ts";
@@ -13,7 +13,7 @@ export function compileExpr(expr: string) {
     const ast1 = parse(tokens);
     const ast2 = optimizeSqlExpr(jsonToSql(ast1));
     const env = { vars: Object.create(null), count: 0 };
-    const { sql, params } = compile(ast2, env)("data");
+    const { sql, params } = compileSqlNode(ast2, env)("data");
     return { sql, params };
   } catch (err: any) {
     if (err?.name !== "PaatakaExpressionError") {

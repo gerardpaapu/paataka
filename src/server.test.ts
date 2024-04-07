@@ -956,7 +956,7 @@ describe("filtering by length", () => {
   });
 });
 
-describe("filtering with some", () => {
+describe("filtering with array methods", () => {
   let token: string;
   beforeEach(() => {
     db.createOrganisation("pandas");
@@ -977,11 +977,33 @@ describe("filtering with some", () => {
   });
 
   // TODO: write "every"
-  it("matches tags", async () => {
+  it("matches tags with .some()", async () => {
     const res = await request(server)
       .get("/api/_/pandas/hats/")
       .query({
         where: '_.tags.some(tag => tag.toUpperCase() == "OLD-SCHOOL")',
+      })
+      .auth(token, { type: "bearer" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toStrictEqual({
+      count: 1,
+      items: [
+        {
+          id: 1,
+          type: "bowler",
+          tags: ["old-school", "stylish", "little"],
+          sizes: [1, 2, 3],
+        },
+      ],
+    });
+  });
+
+  it("matches tags with .every()", async () => {
+    const res = await request(server)
+      .get("/api/_/pandas/hats/")
+      .query({
+        where: "_.tags.every(tag => tag.length >= 6)",
       })
       .auth(token, { type: "bearer" });
 

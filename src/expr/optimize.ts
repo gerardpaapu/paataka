@@ -65,11 +65,12 @@ export function optimizeSqlExpr(node: SqlNode): SqlNode {
       };
     }
 
-    case "some": {
+    case "Some":
+    case "Every": {
       const [a, fn] = node.value;
       const [param, expr] = fn.value;
       return {
-        type: "some",
+        type: node.type,
         value: [
           optimizeJsonExpr(a),
           {

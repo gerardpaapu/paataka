@@ -36,7 +36,11 @@ export type SqlNode =
       value: [haystack: JsonNode, needle: SqlNode];
     }
   | {
-      type: "some";
+      type: "Some";
+      value: [haystack: JsonNode, fn: ArrowFunctionNode];
+    }
+  | {
+      type: "Every";
       value: [haystack: JsonNode, fn: ArrowFunctionNode];
     }
   | {
@@ -139,6 +143,17 @@ export function methodCall(
 
       return some(obj, fn);
     }
+
+    case "every": {
+      const fn = args[0];
+      if (fn == undefined || !isArrowFunction(fn)) {
+        throw new PaatakaExpressionError(
+          `Wrong number of arguments to .some()`,
+        );
+      }
+
+      return every(obj, fn);
+    }
     case "toUpperCase":
       if (args.length !== 0) {
         throw new PaatakaExpressionError(
@@ -177,7 +192,11 @@ export function negative(value: JsonNode): JsonNode {
 }
 
 export function some(obj: JsonNode, fn: ArrowFunctionNode): JsonNode {
-  return sqlToJson({ type: "some", value: [obj, fn] });
+  return sqlToJson({ type: "Some", value: [obj, fn] });
+}
+
+export function every(obj: JsonNode, fn: ArrowFunctionNode): JsonNode {
+  return sqlToJson({ type: "Every", value: [obj, fn] });
 }
 
 export function arrowFn(param: string, body: JsonNode): JsonNode {
