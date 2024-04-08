@@ -205,10 +205,10 @@ export function tokenize(src: Source): Token[] {
 }
 
 function readIdentifier(src: Source): string | undefined {
-  const PATTERN = /[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]*/gu;
+  const PATTERN = /[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]*/uy;
   PATTERN.lastIndex = src.idx;
   const match = PATTERN.exec(src.str);
-  if (match == undefined || match.index > src.idx) {
+  if (match == undefined) {
     return undefined;
   }
 
@@ -217,10 +217,10 @@ function readIdentifier(src: Source): string | undefined {
 }
 
 function readNumberLiteral(src: Source): string | undefined {
-  const PATTERN = /((0\.)|([123456789]\d*))(\.\d+)?/g;
+  const PATTERN = /((0\.)|([123456789]\d*))(\.\d+)?/y;
   PATTERN.lastIndex = src.idx;
   const match = PATTERN.exec(src.str);
-  if (match == undefined || match.index > src.idx) {
+  if (match == undefined) {
     return undefined;
   }
 
