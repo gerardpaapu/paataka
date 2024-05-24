@@ -217,7 +217,7 @@ function readIdentifier(src: Source): string | undefined {
 }
 
 function readNumberLiteral(src: Source): string | undefined {
-  const PATTERN = /((0\.)|([123456789]\d*))(\.\d+)?/y;
+  const PATTERN = /0|(((0\.)|([123456789]\d*))(\.\d+)?)/y;
   PATTERN.lastIndex = src.idx;
   const match = PATTERN.exec(src.str);
   if (match == undefined) {

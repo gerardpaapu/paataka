@@ -137,8 +137,12 @@ export function methodCall(
       const fn = args[0];
       if (fn == undefined || !isArrowFunction(fn)) {
         throw new PaatakaExpressionError(
-          `Wrong number of arguments to .some()`,
+          `.some() must be passed an arrow function`,
         );
+      }
+
+      if (args.length !== 1) {
+        throw new PaatakaExpressionError(`.some() takes exactly one argument`);
       }
 
       return some(obj, fn);
@@ -148,7 +152,13 @@ export function methodCall(
       const fn = args[0];
       if (fn == undefined || !isArrowFunction(fn)) {
         throw new PaatakaExpressionError(
-          `Wrong number of arguments to .some()`,
+          `.every() must be passed an arrow function`,
+        );
+      }
+
+      if (args.length !== 1) {
+        throw new PaatakaExpressionError(
+          `Wrong number of arguments to .every()`,
         );
       }
 

@@ -376,5 +376,5 @@ export function getCollectionSummary(organisation: string) {
     )
     .all(organisation);
 
-  return rows;
+  return rows as Array<{ name: string; count: number }>;
 }

@@ -104,6 +104,55 @@ describe("parser errors", () => {
       `[PaatakaExpressionError: Unexpected COMMA]`,
     );
   });
+
+  it("complains about the wrong number of arguments to methods", () => {
+    expect(() => {
+      read("_.toLowerCase(1)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: Wrong number of arguments to toLowerCase]`,
+    );
+
+    expect(() => {
+      read("_.toUpperCase(1)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: Wrong number of arguments to toUpperCase]`,
+    );
+
+    expect(() => {
+      read("_.some(x => x.length > 2, 2)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: .some() takes exactly one argument]`,
+    );
+
+    expect(() => {
+      read("_.some(1)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: .some() must be passed an arrow function]`,
+    );
+
+    expect(() => {
+      read("_.every(x => x.length > 2, 2)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: Wrong number of arguments to .every()]`,
+    );
+
+    expect(() => {
+      read("_.every(1)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: .every() must be passed an arrow function]`,
+    );
+
+    expect(() => {
+      read("_.badMethodName()");
+    }).toThrowErrorMatchingInlineSnapshot(`[PaatakaExpressionError: Unknown method: badMethodName]`);
+
+    expect(() => {
+      read("_.includes(1, 2, 2)");
+    }).toThrowErrorMatchingInlineSnapshot(
+      `[PaatakaExpressionError: Wrong number of arguments to includes]`,
+    );
+  });
+
   it("reads an empty array", () => {
     expect(read("[]")).toStrictEqual({
       type: "ArrayLiteral",
