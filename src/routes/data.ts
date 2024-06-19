@@ -110,6 +110,25 @@ router.get("/:organisation/:collection/:id", (req, res, next) => {
   res.json(data);
 });
 
+router.delete("/:organisation/:collection", async (req, res, next) => {
+  const { organisation, collection } = req.params;
+
+  if (!req.user || req.user !== organisation) {
+    res
+      .status(StatusCodes.UNAUTHORIZED)
+      .send({ error: "Invalid or missing bearer token" });
+    return;
+  }
+
+  const deleted = db.deleteCollection(organisation, collection);
+  if (!deleted) {
+    res.sendStatus(404);
+    return;
+  }
+
+  res.sendStatus(204);
+});
+
 router.put("/:organisation/:collection/:id", (req, res, next) => {
   const { organisation, collection, id } = req.params;
 

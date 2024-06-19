@@ -63,6 +63,21 @@ export function deleteOrganisation(name: string) {
   return res.changes === 1;
 }
 
+const DELETE_COLLECTION_QUERY = connection.prepare(
+  `DELETE FROM collections
+   WHERE collections.organisation_name = ?
+   AND collections.name = ?`,
+);
+
+export function deleteCollection(
+  organisation_name: string,
+  collection: string,
+) {
+  return (
+    DELETE_COLLECTION_QUERY.run(organisation_name, collection).changes == 1
+  );
+}
+
 const GET_COLLECTIONS_QUERY = connection.prepare(
   "SELECT id, organisation_name, name FROM collections WHERE organisation_name = ?",
 );

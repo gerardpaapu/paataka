@@ -219,6 +219,41 @@ describe("listing objects in a collection", () => {
   });
 });
 
+describe("deleting a collection", () => {
+  let token: string;
+  beforeEach(() => {
+    db.createOrganisation("pandas");
+    const { key } = db.getOrganisation(1);
+    token = key.toString("base64url");
+
+    db.createCollection("pandas", "hats");
+    db.addItemToCollection("pandas", "hats", { type: "bowler" });
+    db.addItemToCollection("pandas", "hats", { type: "sombrero" });
+  });
+
+  it("deletes the collection", async () => {
+    const res = await request(server)
+      .delete("/api/_/pandas/hats")
+      .auth(token, { type: "bearer" });
+
+    expect(res.status).toBe(204);
+
+    const res2 = await request(server)
+      .get("/api/_/pandas/hats")
+      .auth(token, { type: "bearer" });
+
+    expect(res2.status).toBe(404);
+  });
+
+  it("fails for a missing collection", async () => {
+    const res = await request(server)
+      .delete("/api/_/pandas/pants")
+      .auth(token, { type: "bearer" });
+
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("filtering objects in a collection with expressions", () => {
   let token: string;
   beforeEach(() => {
