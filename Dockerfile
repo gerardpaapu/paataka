@@ -3,7 +3,7 @@ FROM node:20-alpine
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN set -eux; \
-  wget -q -O /bin/pnpm "https://github.com/pnpm/pnpm/releases/download/v8.12.1/pnpm-linuxstatic-x64"; \
+  wget -q -O /bin/pnpm "https://github.com/pnpm/pnpm/releases/download/v9.1.0/pnpm-linuxstatic-x64"; \
   chmod +x /bin/pnpm;
 
 WORKDIR /app
